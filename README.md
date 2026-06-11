@@ -1,5 +1,7 @@
 # Codex Quota Float
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Codex Quota Float is a macOS floating window and CLI for local Codex quota
 buckets. It reads the Codex account configured on your machine and shows the
 current rate-limit buckets in a small always-on-top window.
