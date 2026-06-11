@@ -15,7 +15,7 @@ Usage: codex-quota-float <command> [args]
 
 Commands:
   start [--interval seconds] [--normal-window]
-      Open the floating window.
+      Open the floating window. Builds the local app bundle if needed.
 
   stop
       Quit the floating window started from this install.
@@ -24,7 +24,7 @@ Commands:
       Quit and reopen the floating window.
 
   status [--pretty|--json]
-      Print a one-shot quota summary.
+      Print a one-shot quota summary from the local Codex app-server.
 
   skin set <image-path> [skin-title]
       Copy a local image into user config and use it as the image skin.
@@ -35,11 +35,12 @@ Commands:
   skin path
       Show the user-local skin config path.
 
-  login install
-      Start Codex Quota Float automatically after macOS login.
+  autostart install
+      Start Codex Quota Float automatically after macOS user login.
+      Writes ~/Library/LaunchAgents/local.codex-quota-float.plist.
 
-  login uninstall
-      Remove the macOS login item.
+  autostart uninstall
+      Remove the macOS autostart LaunchAgent.
 
   cli install [target-directory-or-path]
       Install a codex-quota-float command that works from any directory.
@@ -49,6 +50,13 @@ Commands:
 
   path
       Print this install path.
+
+Compatibility aliases:
+  open                Same as start.
+  quit                Same as stop.
+  upgrade             Same as update.
+  login install       Same as autostart install.
+  login uninstall     Same as autostart uninstall.
 USAGE
 }
 
@@ -150,7 +158,8 @@ USAGE
         ;;
     esac
     ;;
-  login)
+  autostart|login)
+    parent_command="$command"
     subcommand="${1:-help}"
     if [[ $# -gt 0 ]]; then
       shift
@@ -164,16 +173,20 @@ USAGE
         ;;
       help|--help|-h)
         cat <<'USAGE'
-Usage: codex-quota-float login <command>
+Usage: codex-quota-float autostart <command>
 
 Commands:
-  install     Start Codex Quota Float automatically after macOS login.
-  uninstall   Remove the macOS login item.
+  install     Create a per-user macOS LaunchAgent and start it now.
+  uninstall   Remove the LaunchAgent so the app no longer starts at login.
+
+Compatibility:
+  codex-quota-float login install
+  codex-quota-float login uninstall
 USAGE
         ;;
       *)
-        echo "Unknown login command: $subcommand" >&2
-        echo "Run 'codex-quota-float login help' for usage." >&2
+        echo "Unknown $parent_command command: $subcommand" >&2
+        echo "Run 'codex-quota-float autostart help' for usage." >&2
         exit 2
         ;;
     esac

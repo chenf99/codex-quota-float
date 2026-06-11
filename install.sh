@@ -22,6 +22,7 @@ After installation:
   codex-quota-float start
   codex-quota-float status
   codex-quota-float skin set ~/Pictures/skin.png "My Skin"
+  codex-quota-float autostart install
 USAGE
 }
 
@@ -107,3 +108,4 @@ echo "Try:"
 echo "  codex-quota-float start"
 echo "  codex-quota-float status"
 echo "  codex-quota-float skin set ~/Pictures/skin.png \"My Skin\""
+echo "  codex-quota-float autostart install"
