@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   cat <<'USAGE'
@@ -34,13 +34,13 @@ fi
 mkdir -p "$TARGET_DIR"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 TARGET_PATH="$TARGET_DIR/$TARGET_NAME"
-QUOTED_PLUGIN_ROOT="${(q)PLUGIN_ROOT}"
+QUOTED_INSTALL_ROOT="${(q)INSTALL_ROOT}"
 
 cat > "$TARGET_PATH" <<WRAPPER
 #!/usr/bin/env zsh
 set -euo pipefail
-PLUGIN_ROOT=$QUOTED_PLUGIN_ROOT
-exec "\$PLUGIN_ROOT/scripts/codex-quota-float" "\$@"
+INSTALL_ROOT=$QUOTED_INSTALL_ROOT
+exec "\$INSTALL_ROOT/scripts/codex-quota-float" "\$@"
 WRAPPER
 
 chmod +x "$TARGET_PATH"

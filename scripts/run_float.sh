@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BUILD_DIR="$PLUGIN_ROOT/.build"
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="$INSTALL_ROOT/.build"
 SWIFT_SRC="$SCRIPT_DIR/QuotaFloat.swift"
 BIN="$BUILD_DIR/codex-quota-float"
 STATUS_SCRIPT="$SCRIPT_DIR/codex_quota_status.py"
@@ -47,7 +47,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
   source "$CONFIG_FILE"
 fi
 
-DEFAULT_AVATAR_IMAGE="$PLUGIN_ROOT/assets/image.png"
+DEFAULT_AVATAR_IMAGE="$INSTALL_ROOT/assets/image.png"
 AVATAR_IMAGE="${CODEX_QUOTA_SKIN_IMAGE:-$DEFAULT_AVATAR_IMAGE}"
 IMAGE_SKIN_TITLE="${CODEX_QUOTA_SKIN_TITLE:-Image Skin}"
 AVATAR_INITIALS="${CODEX_QUOTA_AVATAR_INITIALS:-CF}"

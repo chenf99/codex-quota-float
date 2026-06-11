@@ -1,11 +1,11 @@
 .DS_Store
 
 # Build artifacts
-plugins/*/.build/
-plugins/*/dist/
+.build/
+dist/
 
 # Personal image skins should stay local.
-plugins/*/assets/*.png
-plugins/*/assets/*.jpg
-plugins/*/assets/*.jpeg
-plugins/*/assets/*.webp
+assets/*.png
+assets/*.jpg
+assets/*.jpeg
+assets/*.webp

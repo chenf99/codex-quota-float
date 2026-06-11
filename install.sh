@@ -5,7 +5,6 @@ REPO_URL="${CODEX_QUOTA_REPO_URL:-https://github.com/chenf99/codex-quota-float.g
 REF="${CODEX_QUOTA_REF:-main}"
 INSTALL_DIR="${CODEX_QUOTA_INSTALL_DIR:-$HOME/.local/share/codex-quota-float}"
 BIN_DIR="${CODEX_QUOTA_BIN_DIR:-$HOME/.local/bin}"
-PLUGIN_ROOT="$INSTALL_DIR/plugins/codex-quota-float"
 
 print_usage() {
   cat <<'USAGE'
@@ -95,12 +94,12 @@ if ! install_with_git; then
   install_with_archive
 fi
 
-if [[ ! -x "$PLUGIN_ROOT/scripts/install_cli.sh" ]]; then
-  echo "Installed repository is missing the CLI installer: $PLUGIN_ROOT/scripts/install_cli.sh" >&2
+if [[ ! -x "$INSTALL_DIR/scripts/install_cli.sh" ]]; then
+  echo "Installed repository is missing the CLI installer: $INSTALL_DIR/scripts/install_cli.sh" >&2
   exit 1
 fi
 
-"$PLUGIN_ROOT/scripts/install_cli.sh" "$BIN_DIR"
+"$INSTALL_DIR/scripts/install_cli.sh" "$BIN_DIR"
 
 echo
 echo "Codex Quota Float is installed."

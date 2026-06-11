@@ -2,10 +2,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_DIR="${CODEX_QUOTA_CONFIG_DIR:-$HOME/.codex-quota-float}"
 CONFIG_FILE="$CONFIG_DIR/config.env"
-APP_ROOT="$PLUGIN_ROOT/dist/Codex Quota Float.app"
+APP_ROOT="$INSTALL_ROOT/dist/Codex Quota Float.app"
 APP_LAUNCHER="$APP_ROOT/Contents/MacOS/codex-quota-float"
 APP_BIN="$APP_ROOT/Contents/MacOS/codex-quota-float-bin"
 
@@ -18,7 +18,7 @@ Commands:
       Open the floating window.
 
   stop
-      Quit the floating window started from this plugin install.
+      Quit the floating window started from this install.
 
   restart [--interval seconds] [--normal-window]
       Quit and reopen the floating window.
@@ -48,7 +48,7 @@ Commands:
       Update the standalone CLI install from the public repository.
 
   path
-      Print this plugin install path.
+      Print this install path.
 USAGE
 }
 
@@ -70,7 +70,7 @@ stop_window() {
   if [[ "$stopped" == "1" ]]; then
     echo "Stopped Codex Quota Float."
   else
-    echo "Codex Quota Float is not running from this plugin install."
+    echo "Codex Quota Float is not running from this install."
   fi
 }
 
@@ -100,7 +100,7 @@ case "$command" in
     exec "$SCRIPT_DIR/codex_quota_status.py" "$@"
     ;;
   update|upgrade)
-    INSTALLER="$PLUGIN_ROOT/../../install.sh"
+    INSTALLER="$INSTALL_ROOT/install.sh"
     if [[ -x "$INSTALLER" ]]; then
       exec "$INSTALLER" "$@"
     fi
@@ -203,7 +203,7 @@ USAGE
     esac
     ;;
   path)
-    echo "$PLUGIN_ROOT"
+    echo "$INSTALL_ROOT"
     ;;
   *)
     echo "Unknown command: $command" >&2

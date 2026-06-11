@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-APP_ROOT="$PLUGIN_ROOT/dist/Codex Quota Float.app"
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+APP_ROOT="$INSTALL_ROOT/dist/Codex Quota Float.app"
 CONTENTS="$APP_ROOT/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
@@ -23,7 +23,7 @@ if [[ -f "\$CONFIG_FILE" ]]; then
   source "\$CONFIG_FILE"
 fi
 
-DEFAULT_AVATAR_IMAGE="$PLUGIN_ROOT/assets/image.png"
+DEFAULT_AVATAR_IMAGE="$INSTALL_ROOT/assets/image.png"
 AVATAR_IMAGE="\${CODEX_QUOTA_SKIN_IMAGE:-\$DEFAULT_AVATAR_IMAGE}"
 IMAGE_SKIN_TITLE="\${CODEX_QUOTA_SKIN_TITLE:-Image Skin}"
 AVATAR_INITIALS="\${CODEX_QUOTA_AVATAR_INITIALS:-CF}"
@@ -35,7 +35,7 @@ else
   skin_args=(--skin classic)
 fi
 
-exec "$BIN" --status-script "$PLUGIN_ROOT/scripts/codex_quota_status.py" "\${skin_args[@]}" "\$@"
+exec "$BIN" --status-script "$INSTALL_ROOT/scripts/codex_quota_status.py" "\${skin_args[@]}" "\$@"
 LAUNCHER
 chmod +x "$LAUNCHER"
 
