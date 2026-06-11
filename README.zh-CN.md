@@ -6,7 +6,32 @@ Codex Quota Float 是一个 macOS 悬浮窗和命令行工具，用来查看本�
 账号的额度桶和剩余额度。它读取当前机器上已经登录的 Codex 账号，并把额度信息
 展示在一个置顶的小浮窗里。
 
-## 安装
+## 快速开始
+
+1. 安装：
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh
+```
+
+2. 启动悬浮窗：
+
+```bash
+codex-quota-float start
+```
+
+3. 可选命令：
+
+```bash
+codex-quota-float status
+codex-quota-float autostart install
+codex-quota-float skin set ~/Pictures/skin.png "My Skin"
+```
+
+如果终端提示 `codex-quota-float: command not found`，按安装脚本打印的
+`PATH` 提示添加环境变量，然后重新打开终端。
+
+## 安装细节
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh

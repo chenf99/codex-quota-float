@@ -6,7 +6,32 @@ Codex Quota Float is a macOS floating window and CLI for local Codex quota
 buckets. It reads the Codex account configured on your machine and shows the
 current rate-limit buckets in a small always-on-top window.
 
-## Install
+## Quick Start
+
+1. Install:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh
+```
+
+2. Start the floating window:
+
+```bash
+codex-quota-float start
+```
+
+3. Optional commands:
+
+```bash
+codex-quota-float status
+codex-quota-float autostart install
+codex-quota-float skin set ~/Pictures/skin.png "My Skin"
+```
+
+If the shell says `codex-quota-float: command not found`, add the `PATH` line
+printed by the installer and open a new terminal.
+
+## Install Details
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh
@@ -16,7 +41,7 @@ This installs the repository under `~/.local/share/codex-quota-float` and adds
 `codex-quota-float` to `~/.local/bin`. If `~/.local/bin` is not in your shell
 `PATH`, the installer prints the line to add.
 
-## Usage
+## Common Commands
 
 ```bash
 codex-quota-float start
