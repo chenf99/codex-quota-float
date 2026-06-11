@@ -5,6 +5,10 @@ from the local Codex app-server and refreshes every 60 seconds by default.
 
 ## Run
 
+Installing the plugin does not automatically start the floating window. Ask
+Codex to run `Open the Codex quota floating window.`, or run from this plugin
+root:
+
 ```bash
 scripts/open_float.sh
 ```
@@ -26,6 +30,13 @@ and copies the image to `~/.codex-quota-float/skins/`. Personal images are not
 part of the plugin source.
 
 Without a configured image skin, the plugin falls back to `Classic Glass`.
+
+## Per-User Behavior
+
+The quota collector runs `codex app-server --listen stdio://` locally and reads
+the Codex account configured on that machine. It does not include a hard-coded
+account or shared token. Image skin config is also user-local under
+`~/.codex-quota-float/`.
 
 ## Community Packaging
 

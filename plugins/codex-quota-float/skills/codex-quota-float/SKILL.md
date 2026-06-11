@@ -7,6 +7,9 @@ description: Start or inspect a local macOS floating window that shows Codex app
 
 Use this skill when the user asks to view Codex quota, remaining quota, rate limits, or the Codex quota floating window.
 
+Resolve the plugin root as two directories above this `SKILL.md` before running
+scripts. Installing the plugin does not start the floating window by itself.
+
 ## Commands
 
 - Start the floating window:
@@ -30,6 +33,8 @@ scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
 
 - Pass `--image-skin-title "<name>"` with `--avatar-image <path>` when launching with a one-off custom image.
 - If no image skin is configured, the plugin starts with `Classic Glass`.
+- Quota and image skin config are per-user. The collector reads the local Codex
+  app-server account, and custom image skins live under `~/.codex-quota-float/`.
 
 - Print a one-shot terminal summary:
 

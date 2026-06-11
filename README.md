@@ -6,12 +6,22 @@ macOS floating window that shows local Codex quota buckets.
 ## Install
 
 ```bash
-codex plugin marketplace add <owner>/codex-quota-float --ref main
+codex plugin marketplace add chenf99/codex-quota-float --ref main
 codex plugin add codex-quota-float@codex-quota-float
 ```
 
-Then ask Codex to open the floating quota window, or run the plugin scripts
-from the installed plugin root.
+Installing the plugin does not automatically start the floating window. Start it
+by asking Codex:
+
+```text
+Open the Codex quota floating window.
+```
+
+For automatic startup after login, ask Codex:
+
+```text
+Install Codex Quota Float as a login item.
+```
 
 ## macOS Only
 
@@ -24,7 +34,7 @@ The public plugin does not include personal images. Users can configure their
 own local image skin:
 
 ```bash
-plugins/codex-quota-float/scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
+scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
 ```
 
 The image is copied to `~/.codex-quota-float/skins/`, outside this repository.
