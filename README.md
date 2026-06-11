@@ -7,7 +7,7 @@ current rate-limit buckets in a small always-on-top window.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh | zsh
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh
 ```
 
 This installs the repository under `~/.local/share/codex-quota-float` and adds
