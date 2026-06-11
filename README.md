@@ -10,14 +10,32 @@ codex plugin marketplace add chenf99/codex-quota-float --ref main
 codex plugin add codex-quota-float@codex-quota-float
 ```
 
-Installing the plugin does not automatically start the floating window. Start it
-by asking Codex:
+Installing the plugin only makes it available to Codex. It does not
+automatically start the floating window.
+
+Start it by asking Codex:
 
 ```text
 Open the Codex quota floating window.
 ```
 
-For automatic startup after login, ask Codex:
+Or install the command-line wrapper once:
+
+```text
+Install the Codex Quota Float CLI.
+```
+
+After that, `codex-quota-float` works from any directory:
+
+```bash
+codex-quota-float start
+codex-quota-float status
+codex-quota-float skin set ~/Pictures/skin.png "My Skin"
+codex-quota-float login install
+codex-quota-float stop
+```
+
+For automatic startup after login without installing the CLI, ask Codex:
 
 ```text
 Install Codex Quota Float as a login item.
@@ -31,10 +49,10 @@ This plugin currently uses Swift and AppKit (`NSWindow`, `.app` bundles,
 ## Personal Skins
 
 The public plugin does not include personal images. Users can configure their
-own local image skin:
+own local image skin after installing the CLI:
 
 ```bash
-scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
+codex-quota-float skin set /path/to/image.png "My Skin Name"
 ```
 
 The image is copied to `~/.codex-quota-float/skins/`, outside this repository.

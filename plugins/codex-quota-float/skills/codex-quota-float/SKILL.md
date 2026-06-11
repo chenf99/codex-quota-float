@@ -9,13 +9,15 @@ Use this skill when the user asks to view Codex quota, remaining quota, rate lim
 
 Resolve the plugin root as two directories above this `SKILL.md` before running
 scripts. Installing the plugin does not start the floating window by itself.
+Prefer `scripts/codex-quota-float` for user-facing operations because it
+provides stable start, stop, status, skin, login-item, and CLI-install commands.
 
 ## Commands
 
 - Start the floating window:
 
 ```bash
-scripts/open_float.sh
+scripts/codex-quota-float start
 ```
 
 - Start it in the current terminal instead:
@@ -25,10 +27,16 @@ scripts/run_float.sh
 ```
 
 - In the floating window, right-click the ball or detail panel for `Refresh Now`, `Skin`, and `Quit Codex Quota`.
+- Install a shell command that works from any directory:
+
+```bash
+scripts/codex-quota-float cli install
+```
+
 - Users can set their own image skin without editing source:
 
 ```bash
-scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
+scripts/codex-quota-float skin set /path/to/image.png "My Skin Name"
 ```
 
 - Pass `--image-skin-title "<name>"` with `--avatar-image <path>` when launching with a one-off custom image.
@@ -39,25 +47,25 @@ scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
 - Print a one-shot terminal summary:
 
 ```bash
-scripts/codex_quota_status.py
+scripts/codex-quota-float status
 ```
 
 - Print raw JSON:
 
 ```bash
-scripts/codex_quota_status.py --pretty
+scripts/codex-quota-float status --pretty
 ```
 
 - Install as a login item:
 
 ```bash
-scripts/install_launch_agent.sh
+scripts/codex-quota-float login install
 ```
 
 - Remove the login item:
 
 ```bash
-scripts/uninstall_launch_agent.sh
+scripts/codex-quota-float login uninstall
 ```
 
 ## Notes

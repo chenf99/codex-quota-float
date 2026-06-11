@@ -1,0 +1,200 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIG_DIR="${CODEX_QUOTA_CONFIG_DIR:-$HOME/.codex-quota-float}"
+CONFIG_FILE="$CONFIG_DIR/config.env"
+APP_ROOT="$PLUGIN_ROOT/dist/Codex Quota Float.app"
+APP_LAUNCHER="$APP_ROOT/Contents/MacOS/codex-quota-float"
+APP_BIN="$APP_ROOT/Contents/MacOS/codex-quota-float-bin"
+
+print_usage() {
+  cat <<'USAGE'
+Usage: codex-quota-float <command> [args]
+
+Commands:
+  start [--interval seconds] [--normal-window]
+      Open the floating window.
+
+  stop
+      Quit the floating window started from this plugin install.
+
+  restart [--interval seconds] [--normal-window]
+      Quit and reopen the floating window.
+
+  status [--pretty|--json]
+      Print a one-shot quota summary.
+
+  skin set <image-path> [skin-title]
+      Copy a local image into user config and use it as the image skin.
+
+  skin reset
+      Return to the built-in Classic Glass skin.
+
+  skin path
+      Show the user-local skin config path.
+
+  login install
+      Start Codex Quota Float automatically after macOS login.
+
+  login uninstall
+      Remove the macOS login item.
+
+  cli install [target-directory-or-path]
+      Install a codex-quota-float command that works from any directory.
+
+  path
+      Print this plugin install path.
+USAGE
+}
+
+stop_window() {
+  local stopped=0
+
+  if [[ -e "$APP_BIN" ]]; then
+    if pkill -f "$APP_BIN" 2>/dev/null; then
+      stopped=1
+    fi
+  fi
+
+  if [[ -e "$APP_LAUNCHER" ]]; then
+    if pkill -f "$APP_LAUNCHER" 2>/dev/null; then
+      stopped=1
+    fi
+  fi
+
+  if [[ "$stopped" == "1" ]]; then
+    echo "Stopped Codex Quota Float."
+  else
+    echo "Codex Quota Float is not running from this plugin install."
+  fi
+}
+
+command="${1:-help}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+case "$command" in
+  help|--help|-h)
+    print_usage
+    ;;
+  start|open)
+    exec "$SCRIPT_DIR/open_float.sh" "$@"
+    ;;
+  run)
+    exec "$SCRIPT_DIR/run_float.sh" "$@"
+    ;;
+  stop|quit)
+    stop_window
+    ;;
+  restart)
+    stop_window
+    exec "$SCRIPT_DIR/open_float.sh" "$@"
+    ;;
+  status)
+    exec "$SCRIPT_DIR/codex_quota_status.py" "$@"
+    ;;
+  skin)
+    subcommand="${1:-help}"
+    if [[ $# -gt 0 ]]; then
+      shift
+    fi
+    case "$subcommand" in
+      set)
+        exec "$SCRIPT_DIR/set_image_skin.sh" "$@"
+        ;;
+      reset)
+        rm -f "$CONFIG_FILE"
+        echo "Reset skin to Classic Glass."
+        echo "Removed $CONFIG_FILE"
+        ;;
+      path)
+        echo "Config directory: $CONFIG_DIR"
+        echo "Config file: $CONFIG_FILE"
+        if [[ -f "$CONFIG_FILE" ]]; then
+          echo
+          sed 's/^/  /' "$CONFIG_FILE"
+        else
+          echo "No custom skin is configured."
+        fi
+        ;;
+      help|--help|-h)
+        cat <<'USAGE'
+Usage: codex-quota-float skin <command> [args]
+
+Commands:
+  set <image-path> [skin-title]   Configure a local image skin.
+  reset                           Return to Classic Glass.
+  path                            Show the user-local config path.
+USAGE
+        ;;
+      *)
+        echo "Unknown skin command: $subcommand" >&2
+        echo "Run 'codex-quota-float skin help' for usage." >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  login)
+    subcommand="${1:-help}"
+    if [[ $# -gt 0 ]]; then
+      shift
+    fi
+    case "$subcommand" in
+      install)
+        exec "$SCRIPT_DIR/install_launch_agent.sh" "$@"
+        ;;
+      uninstall|remove)
+        exec "$SCRIPT_DIR/uninstall_launch_agent.sh" "$@"
+        ;;
+      help|--help|-h)
+        cat <<'USAGE'
+Usage: codex-quota-float login <command>
+
+Commands:
+  install     Start Codex Quota Float automatically after macOS login.
+  uninstall   Remove the macOS login item.
+USAGE
+        ;;
+      *)
+        echo "Unknown login command: $subcommand" >&2
+        echo "Run 'codex-quota-float login help' for usage." >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  cli)
+    subcommand="${1:-help}"
+    if [[ $# -gt 0 ]]; then
+      shift
+    fi
+    case "$subcommand" in
+      install)
+        exec "$SCRIPT_DIR/install_cli.sh" "$@"
+        ;;
+      help|--help|-h)
+        cat <<'USAGE'
+Usage: codex-quota-float cli <command> [args]
+
+Commands:
+  install [target-directory-or-path]   Install the CLI wrapper.
+USAGE
+        ;;
+      *)
+        echo "Unknown cli command: $subcommand" >&2
+        echo "Run 'codex-quota-float cli help' for usage." >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  path)
+    echo "$PLUGIN_ROOT"
+    ;;
+  *)
+    echo "Unknown command: $command" >&2
+    echo "Run 'codex-quota-float help' for usage." >&2
+    exit 2
+    ;;
+esac

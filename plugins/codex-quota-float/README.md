@@ -6,23 +6,36 @@ from the local Codex app-server and refreshes every 60 seconds by default.
 ## Run
 
 Installing the plugin does not automatically start the floating window. Ask
-Codex to run `Open the Codex quota floating window.`, or run from this plugin
-root:
+Codex to run `Open the Codex quota floating window.`
+
+For terminal usage, install the CLI once:
+
+```bash
+scripts/codex-quota-float cli install
+```
+
+Then run from any directory:
+
+```bash
+codex-quota-float start
+codex-quota-float status
+codex-quota-float stop
+```
+
+Use right-click on the floating ball or panel for refresh, skin switching, and
+quit. Direct script usage is still available from this plugin root:
 
 ```bash
 scripts/open_float.sh
 ```
-
-Use right-click on the floating ball or panel for refresh, skin switching, and
-quit.
 
 ## Custom Image Skin
 
 Set a local image as the panel and ball skin:
 
 ```bash
-scripts/set_image_skin.sh /path/to/image.png "My Skin Name"
-scripts/open_float.sh
+codex-quota-float skin set /path/to/image.png "My Skin Name"
+codex-quota-float restart
 ```
 
 The setup script writes user-local config to `~/.codex-quota-float/config.env`

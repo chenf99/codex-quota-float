@@ -19,6 +19,7 @@
     "defaultPrompt": [
       "Open the Codex quota floating window.",
       "Show my Codex quota status.",
+      "Install the Codex Quota Float CLI.",
       "Install Codex Quota Float as a login item."
     ],
     "brandColor": "#2563EB"
