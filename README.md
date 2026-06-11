@@ -1,29 +1,16 @@
-# Codex Quota Float Marketplace
+# Codex Quota Float
 
-This repository is a Codex plugin marketplace for `codex-quota-float`, a
-macOS floating window that shows local Codex quota buckets.
+Codex Quota Float is a macOS floating window and CLI for local Codex quota
+buckets. It reads the Codex account configured on your machine.
 
-## Install
+## Install CLI
 
 ```bash
-codex plugin marketplace add chenf99/codex-quota-float --ref main
-codex plugin add codex-quota-float@codex-quota-float
+curl -fsSL https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh | zsh
 ```
 
-Installing the plugin only makes it available to Codex. It does not
-automatically start the floating window.
-
-Start it by asking Codex:
-
-```text
-Open the Codex quota floating window.
-```
-
-Or install the command-line wrapper once:
-
-```text
-Install the Codex Quota Float CLI.
-```
+This installs the repository under `~/.local/share/codex-quota-float` and adds
+`codex-quota-float` to `~/.local/bin`.
 
 After that, `codex-quota-float` works from any directory:
 
@@ -33,12 +20,28 @@ codex-quota-float status
 codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 codex-quota-float login install
 codex-quota-float stop
+codex-quota-float update
 ```
 
-For automatic startup after login without installing the CLI, ask Codex:
+If `~/.local/bin` is not in your shell `PATH`, the installer prints the line to
+add.
+
+## Optional Codex Plugin
+
+You do not need the Codex plugin to use the floating quota window. Install the
+plugin only if you also want Codex to know these workflows as an installed
+skill.
+
+```bash
+codex plugin marketplace add chenf99/codex-quota-float --ref main
+codex plugin add codex-quota-float@codex-quota-float
+```
+
+Installing the plugin only makes it available to Codex. It does not
+automatically start the floating window. Start it by asking Codex:
 
 ```text
-Install Codex Quota Float as a login item.
+Open the Codex quota floating window.
 ```
 
 ## macOS Only
@@ -49,7 +52,7 @@ This plugin currently uses Swift and AppKit (`NSWindow`, `.app` bundles,
 ## Personal Skins
 
 The public plugin does not include personal images. Users can configure their
-own local image skin after installing the CLI:
+own local image skin:
 
 ```bash
 codex-quota-float skin set /path/to/image.png "My Skin Name"

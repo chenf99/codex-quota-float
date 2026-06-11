@@ -5,9 +5,6 @@ from the local Codex app-server and refreshes every 60 seconds by default.
 
 ## Run
 
-Installing the plugin does not automatically start the floating window. Ask
-Codex to run `Open the Codex quota floating window.`
-
 For terminal usage, install the CLI once:
 
 ```bash
@@ -27,6 +24,13 @@ quit. Direct script usage is still available from this plugin root:
 
 ```bash
 scripts/open_float.sh
+```
+
+For standalone installs that do not need the Codex plugin, use the repository
+installer instead:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh | zsh
 ```
 
 ## Custom Image Skin
@@ -58,6 +62,5 @@ For public distribution, keep this plugin free of personal assets:
 - Do not commit files under `assets/*.png`, `assets/*.jpg`, `assets/*.jpeg`, or
   `assets/*.webp`.
 - Keep user-specific skins in `~/.codex-quota-float/skins/`.
-- Distribute the plugin through a Git marketplace repository so users can run
-  `codex plugin marketplace add <owner/repo>` and then
-  `codex plugin add codex-quota-float@<marketplace>`.
+- Prefer the root `install.sh` path for public CLI distribution.
+- Keep the Git marketplace path as optional Codex skill integration.

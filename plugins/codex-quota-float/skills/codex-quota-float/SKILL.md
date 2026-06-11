@@ -11,6 +11,8 @@ Resolve the plugin root as two directories above this `SKILL.md` before running
 scripts. Installing the plugin does not start the floating window by itself.
 Prefer `scripts/codex-quota-float` for user-facing operations because it
 provides stable start, stop, status, skin, login-item, and CLI-install commands.
+For users who only want the command-line tool and do not need the Codex plugin
+integration, recommend the standalone installer from the public repository.
 
 ## Commands
 
@@ -31,6 +33,18 @@ scripts/run_float.sh
 
 ```bash
 scripts/codex-quota-float cli install
+```
+
+- Standalone install without the Codex plugin:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh | zsh
+```
+
+- Update a standalone install:
+
+```bash
+scripts/codex-quota-float update
 ```
 
 - Users can set their own image skin without editing source:

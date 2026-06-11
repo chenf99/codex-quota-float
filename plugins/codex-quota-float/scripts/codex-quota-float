@@ -44,6 +44,9 @@ Commands:
   cli install [target-directory-or-path]
       Install a codex-quota-float command that works from any directory.
 
+  update
+      Update the standalone CLI install from the public repository.
+
   path
       Print this plugin install path.
 USAGE
@@ -95,6 +98,16 @@ case "$command" in
     ;;
   status)
     exec "$SCRIPT_DIR/codex_quota_status.py" "$@"
+    ;;
+  update|upgrade)
+    INSTALLER="$PLUGIN_ROOT/../../install.sh"
+    if [[ -x "$INSTALLER" ]]; then
+      exec "$INSTALLER" "$@"
+    fi
+    echo "This install does not include install.sh." >&2
+    echo "Update with:" >&2
+    echo "  curl -fsSL https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh | zsh" >&2
+    exit 1
     ;;
   skin)
     subcommand="${1:-help}"
