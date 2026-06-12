@@ -8,19 +8,23 @@ Codex Quota Float 是一个 macOS 悬浮窗和命令行工具，用来查看本�
 
 ## 快速开始
 
-1. 安装：
+一条命令完成安装并启动悬浮窗：
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh && "$HOME/.local/bin/codex-quota-float" start
+```
+
+也可以分开执行：
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh
 ```
 
-2. 启动悬浮窗：
-
 ```bash
 codex-quota-float start
 ```
 
-3. 可选命令：
+可选命令：
 
 ```bash
 codex-quota-float status

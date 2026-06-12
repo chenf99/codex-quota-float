@@ -8,19 +8,23 @@ current rate-limit buckets in a small always-on-top window.
 
 ## Quick Start
 
-1. Install:
+Install and start the floating window with one command:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh && "$HOME/.local/bin/codex-quota-float" start
+```
+
+Or run the steps separately:
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh
 ```
 
-2. Start the floating window:
-
 ```bash
 codex-quota-float start
 ```
 
-3. Optional commands:
+Optional commands:
 
 ```bash
 codex-quota-float status
