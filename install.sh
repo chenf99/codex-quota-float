@@ -27,7 +27,6 @@ Environment overrides:
 After installation:
   codex-quota-float start
   codex-quota-float status
-  codex-quota-float stats
   codex-quota-float autostart install
 
 For a custom image skin, right-click the floating window and choose:
@@ -161,14 +160,13 @@ echo "Codex Quota Float is installed."
 echo "Try:"
 echo "  codex-quota-float start"
 echo "  codex-quota-float status"
-echo "  codex-quota-float stats"
 echo "  codex-quota-float autostart install"
 echo
 if telemetry_disabled; then
   echo "Anonymous install counting is disabled on this machine."
 else
   echo "Anonymous install counting is enabled. It sends only an install event name."
-  echo "Disable it with: codex-quota-float telemetry disable"
+  echo "Set CODEX_QUOTA_TELEMETRY=0 before installing to opt out."
 fi
 echo
 echo "For a custom image skin, right-click the floating window and choose:"

@@ -28,7 +28,6 @@ codex-quota-float start
 
 ```bash
 codex-quota-float status
-codex-quota-float stats
 codex-quota-float autostart install
 ```
 
@@ -52,7 +51,6 @@ shell 的 `PATH` 里，安装脚本会打印需要添加的命令。
 ```bash
 codex-quota-float start
 codex-quota-float status
-codex-quota-float stats
 codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 codex-quota-float autostart install
 codex-quota-float stop
@@ -86,23 +84,6 @@ codex-quota-float status [--pretty|--json]
 ```
 
 读取本机 Codex app-server 的账号和 rate-limit 快照，并在终端输出一次性额度摘要。
-
-```bash
-codex-quota-float stats
-```
-
-查看公开的匿名安装量。安装脚本会按本机配置目录记录一次成功安装事件，使用的公开
-计数 key 是 `chenf99-codex-quota-float-install`。
-
-```bash
-codex-quota-float telemetry status
-codex-quota-float telemetry disable
-codex-quota-float telemetry enable
-```
-
-查看或修改当前机器上的匿名安装量统计设置。计数请求只会把事件名发送到
-`https://countapi.mileshilliard.com`，不会发送 Codex 账号、额度数据、路径、
-图片名称或皮肤文件。单次安装也可以用 `CODEX_QUOTA_TELEMETRY=0` 关闭。
 
 ```bash
 codex-quota-float skin set <image-path> [skin-title]

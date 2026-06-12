@@ -29,12 +29,6 @@ Commands:
   status [--pretty|--json]
       Print a one-shot quota summary from the local Codex app-server.
 
-  stats
-      Show public anonymous install counts.
-
-  telemetry status|disable|enable
-      Inspect or change anonymous install counting on this machine.
-
   skin set <image-path> [skin-title]
       Copy a local image into user config and use it as the image skin.
 
