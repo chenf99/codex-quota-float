@@ -228,12 +228,6 @@ final class QuotaBadgeView: NSView {
         chooseImageItem.target = self
         skinMenu.addItem(chooseImageItem)
 
-        if skin == .image, let imageSkinPath {
-            let revealItem = NSMenuItem(title: "Reveal Current Image", action: #selector(revealCurrentImageSkinFromMenu), keyEquivalent: "")
-            revealItem.target = self
-            revealItem.representedObject = imageSkinPath
-            skinMenu.addItem(revealItem)
-        }
         menu.addItem(skinItem)
         menu.setSubmenu(skinMenu, for: skinItem)
 
@@ -265,11 +259,6 @@ final class QuotaBadgeView: NSView {
 
     @objc private func chooseImageSkinFromMenu() {
         onChooseImageSkinRequested?()
-    }
-
-    @objc private func revealCurrentImageSkinFromMenu(_ sender: NSMenuItem) {
-        guard let path = sender.representedObject as? String else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
     @objc private func quitFromMenu() {
