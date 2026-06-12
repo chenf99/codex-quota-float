@@ -94,9 +94,10 @@ codex-quota-float skin set <image-path> [skin-title]
 ```
 
 Copies a local image to `~/.codex-quota-float/skins/` and uses it as the ball
-and panel skin. The optional title is shown in the skin menu. You can do the
-same thing from the UI by right-clicking the floating window and choosing
-`Skin` -> `Choose Image...`.
+and panel skin. Each selected image is copied as its own file so older skin
+files are not overwritten. The optional title is shown in the skin menu. You
+can do the same thing from the UI by right-clicking the floating window and
+choosing `Skin` -> `Choose Image...`.
 
 ```bash
 codex-quota-float skin reset

@@ -90,8 +90,9 @@ codex-quota-float skin set <image-path> [skin-title]
 ```
 
 把本地图片复制到 `~/.codex-quota-float/skins/`，并作为悬浮球和展开面板的皮肤。
-可选的 `skin-title` 会显示在皮肤菜单里。你也可以在界面里右键悬浮窗，选择
-`Skin` -> `Choose Image...` 完成同样的配置。
+每次选择的图片都会保存成独立文件，不会覆盖旧皮肤文件。可选的 `skin-title`
+会显示在皮肤菜单里。你也可以在界面里右键悬浮窗，选择 `Skin` -> `Choose Image...`
+完成同样的配置。
 
 ```bash
 codex-quota-float skin reset

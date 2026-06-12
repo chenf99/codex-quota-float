@@ -750,9 +750,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let configDirectory = userConfigDirectory()
             let skinDirectory = configDirectory.appendingPathComponent("skins", isDirectory: true)
             let configFile = configDirectory.appendingPathComponent("config.env")
-            let skinImage = skinDirectory.appendingPathComponent("custom-image-skin.png")
 
             try fileManager.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
+            let skinImage = uniqueSkinImageURL(for: sourceURL, in: skinDirectory)
             try writePNGImage(from: sourceURL, to: skinImage)
 
             let title = defaultImageSkinTitle(for: sourceURL.path)
@@ -805,6 +805,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Could Not Set Image Skin"
         alert.informativeText = error.localizedDescription
         alert.runModal()
+    }
+
+    private func uniqueSkinImageURL(for sourceURL: URL, in skinDirectory: URL) -> URL {
+        let rawBase = sourceURL.deletingPathExtension().lastPathComponent
+        let sanitized = rawBase
+            .map { character -> Character in
+                if character.isLetter || character.isNumber || character == "-" || character == "_" {
+                    return character
+                }
+                return "-"
+            }
+        let compactBase = String(sanitized)
+            .split(separator: "-", omittingEmptySubsequences: true)
+            .joined(separator: "-")
+        let base = compactBase.isEmpty ? "image-skin" : compactBase
+        let timestamp = skinTimestamp()
+        var candidate = skinDirectory.appendingPathComponent("\(base)-\(timestamp).png")
+        var suffix = 2
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = skinDirectory.appendingPathComponent("\(base)-\(timestamp)-\(suffix).png")
+            suffix += 1
+        }
+        return candidate
+    }
+
+    private func skinTimestamp() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMddHHmmss"
+        return formatter.string(from: Date())
     }
 
     private func setExpanded(_ expanded: Bool) {

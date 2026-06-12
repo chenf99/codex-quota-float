@@ -23,7 +23,21 @@ SKIN_DIR="$CONFIG_DIR/skins"
 CONFIG_FILE="$CONFIG_DIR/config.env"
 mkdir -p "$SKIN_DIR"
 
-SKIN_IMAGE="$SKIN_DIR/custom-image-skin.png"
+BASE_NAME="${SOURCE_IMAGE:t:r}"
+SAFE_BASE="$(printf '%s' "$BASE_NAME" | tr -cs '[:alnum:]_-' '-' | sed 's/^-*//; s/-*$//')"
+if [[ -z "$SAFE_BASE" ]]; then
+  SAFE_BASE="image-skin"
+fi
+TIMESTAMP="$(date +%Y%m%d%H%M%S)"
+SKIN_IMAGE="$SKIN_DIR/$SAFE_BASE-$TIMESTAMP.png"
+if [[ -e "$SKIN_IMAGE" ]]; then
+  SUFFIX=2
+  while [[ -e "$SKIN_DIR/$SAFE_BASE-$TIMESTAMP-$SUFFIX.png" ]]; do
+    SUFFIX=$((SUFFIX + 1))
+  done
+  SKIN_IMAGE="$SKIN_DIR/$SAFE_BASE-$TIMESTAMP-$SUFFIX.png"
+fi
+
 if command -v sips >/dev/null 2>&1; then
   sips -s format png "$SOURCE_IMAGE" --out "$SKIN_IMAGE" >/dev/null
 else
@@ -33,7 +47,6 @@ fi
 if [[ $# -ge 2 && -n "${2:-}" ]]; then
   SKIN_TITLE="$2"
 else
-  BASE_NAME="${SOURCE_IMAGE:t:r}"
   SKIN_TITLE="${BASE_NAME//[-_]/ }"
 fi
 
