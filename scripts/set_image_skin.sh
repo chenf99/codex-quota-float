@@ -54,6 +54,7 @@ fi
   printf 'export CODEX_QUOTA_SKIN_IMAGE=%q\n' "$SKIN_IMAGE"
   printf 'export CODEX_QUOTA_SKIN_TITLE=%q\n' "$SKIN_TITLE"
 } > "$CONFIG_FILE"
+printf '%s\n' "$SKIN_TITLE" > "$SKIN_IMAGE.title"
 
 echo "Configured image skin:"
 echo "  image: $SKIN_IMAGE"

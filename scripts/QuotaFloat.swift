@@ -47,6 +47,22 @@ enum QuotaSkin: String, CaseIterable {
     }
 }
 
+struct ImageSkinOption {
+    let path: String
+    let title: String
+}
+
+enum SkinError: LocalizedError {
+    case message(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .message(let text):
+            return text
+        }
+    }
+}
+
 private let skinDefaultsKey = "CodexQuotaFloatSkin"
 
 final class QuotaBadgeView: NSView {
@@ -68,6 +84,12 @@ final class QuotaBadgeView: NSView {
     var imageSkinTitle = "Image Skin" {
         didSet { needsDisplay = true }
     }
+    var imageSkinPath: String? {
+        didSet { needsDisplay = true }
+    }
+    var imageSkinOptions: [ImageSkinOption] = [] {
+        didSet { needsDisplay = true }
+    }
     var isExpanded = false {
         didSet {
             expansionProgress = isExpanded ? 1 : 0
@@ -84,6 +106,7 @@ final class QuotaBadgeView: NSView {
     var onRefreshRequested: (() -> Void)?
     var onQuitRequested: (() -> Void)?
     var onChooseImageSkinRequested: (() -> Void)?
+    var onSelectImageSkinRequested: ((String) -> Void)?
     var onDragStarted: (() -> Void)?
     var onDragEnded: (() -> Void)?
     private var dragStartMouseLocation: NSPoint?
@@ -170,17 +193,47 @@ final class QuotaBadgeView: NSView {
 
         let skinItem = NSMenuItem(title: "Skin", action: nil, keyEquivalent: "")
         let skinMenu = NSMenu(title: "Skin")
-        for option in QuotaSkin.allCases {
-            let item = NSMenuItem(title: option.title(imageSkinTitle: imageSkinTitle), action: #selector(selectSkinFromMenu), keyEquivalent: "")
-            item.target = self
-            item.representedObject = option.rawValue
-            item.state = option == skin ? .on : .off
-            skinMenu.addItem(item)
+        if imageSkinOptions.isEmpty {
+            let emptyItem = NSMenuItem(title: "No Image Skins", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            skinMenu.addItem(emptyItem)
+        } else {
+            for option in imageSkinOptions {
+                let item = NSMenuItem(title: option.title, action: #selector(selectImageSkinFromMenu), keyEquivalent: "")
+                item.target = self
+                item.representedObject = option.path
+                item.state = skin == .image && option.path == imageSkinPath ? .on : .off
+                skinMenu.addItem(item)
+            }
         }
+        skinMenu.addItem(.separator())
+
+        let classicItem = NSMenuItem(title: QuotaSkin.classic.title(imageSkinTitle: imageSkinTitle), action: #selector(selectSkinFromMenu), keyEquivalent: "")
+        classicItem.target = self
+        classicItem.representedObject = QuotaSkin.classic.rawValue
+        classicItem.state = skin == .classic ? .on : .off
+        skinMenu.addItem(classicItem)
+
+        if skin == .image, let imageSkinPath, !imageSkinOptions.contains(where: { $0.path == imageSkinPath }) {
+            let item = NSMenuItem(title: imageSkinTitle, action: #selector(selectImageSkinFromMenu), keyEquivalent: "")
+            item.target = self
+            item.representedObject = imageSkinPath
+            item.state = .on
+            skinMenu.insertItem(.separator(), at: 0)
+            skinMenu.insertItem(item, at: 0)
+        }
+
         skinMenu.addItem(.separator())
         let chooseImageItem = NSMenuItem(title: "Choose Image...", action: #selector(chooseImageSkinFromMenu), keyEquivalent: "")
         chooseImageItem.target = self
         skinMenu.addItem(chooseImageItem)
+
+        if skin == .image, let imageSkinPath {
+            let revealItem = NSMenuItem(title: "Reveal Current Image", action: #selector(revealCurrentImageSkinFromMenu), keyEquivalent: "")
+            revealItem.target = self
+            revealItem.representedObject = imageSkinPath
+            skinMenu.addItem(revealItem)
+        }
         menu.addItem(skinItem)
         menu.setSubmenu(skinMenu, for: skinItem)
 
@@ -205,8 +258,18 @@ final class QuotaBadgeView: NSView {
         skin = selected
     }
 
+    @objc private func selectImageSkinFromMenu(_ sender: NSMenuItem) {
+        guard let path = sender.representedObject as? String else { return }
+        onSelectImageSkinRequested?(path)
+    }
+
     @objc private func chooseImageSkinFromMenu() {
         onChooseImageSkinRequested?()
+    }
+
+    @objc private func revealCurrentImageSkinFromMenu(_ sender: NSMenuItem) {
+        guard let path = sender.representedObject as? String else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
     @objc private func quitFromMenu() {
@@ -695,8 +758,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         badgeView = QuotaBadgeView(frame: NSRect(origin: .zero, size: collapsedSize))
         badgeView.avatarImage = avatarImagePath.flatMap { NSImage(contentsOfFile: $0) }
+        badgeView.imageSkinPath = avatarImagePath
         badgeView.avatarInitials = avatarInitials
         badgeView.imageSkinTitle = imageSkinTitle
+        reloadImageSkinOptions()
         if let storedSkin = UserDefaults.standard.string(forKey: skinDefaultsKey).flatMap(QuotaSkin.init(rawValue:)) {
             badgeView.skin = storedSkin
         } else {
@@ -713,6 +778,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         badgeView.onChooseImageSkinRequested = { [weak self] in
             self?.chooseImageSkin()
+        }
+        badgeView.onSelectImageSkinRequested = { [weak self] path in
+            self?.selectImageSkin(at: path)
         }
         badgeView.onDragStarted = { [weak self] in
             self?.beginWindowDrag()
@@ -749,27 +817,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let fileManager = FileManager.default
             let configDirectory = userConfigDirectory()
             let skinDirectory = configDirectory.appendingPathComponent("skins", isDirectory: true)
-            let configFile = configDirectory.appendingPathComponent("config.env")
 
             try fileManager.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
             let skinImage = uniqueSkinImageURL(for: sourceURL, in: skinDirectory)
             try writePNGImage(from: sourceURL, to: skinImage)
 
             let title = defaultImageSkinTitle(for: sourceURL.path)
-            let config = [
-                "export CODEX_QUOTA_SKIN_IMAGE=\(zshQuoted(skinImage.path))",
-                "export CODEX_QUOTA_SKIN_TITLE=\(zshQuoted(title))",
-                "",
-            ].joined(separator: "\n")
-            try config.write(to: configFile, atomically: true, encoding: .utf8)
-
-            badgeView.avatarImage = NSImage(contentsOf: skinImage)
-            badgeView.imageSkinTitle = title
-            badgeView.skin = .image
-            badgeView.needsDisplay = true
+            try writeSkinTitle(title, for: skinImage)
+            try applyImageSkin(path: skinImage.path, title: title)
         } catch {
             showSkinError(error)
         }
+    }
+
+    private func selectImageSkin(at path: String) {
+        let url = URL(fileURLWithPath: path)
+        let title = storedSkinTitle(for: url) ?? defaultImageSkinTitle(for: path)
+        do {
+            try applyImageSkin(path: path, title: title)
+        } catch {
+            showSkinError(error)
+        }
+    }
+
+    private func applyImageSkin(path: String, title: String) throws {
+        let imageURL = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: imageURL.path) else {
+            throw SkinError.message("Image not found: \(imageURL.path)")
+        }
+        try writeSkinConfig(imagePath: imageURL.path, title: title)
+        badgeView.avatarImage = NSImage(contentsOf: imageURL)
+        badgeView.imageSkinPath = imageURL.path
+        badgeView.imageSkinTitle = title
+        badgeView.skin = .image
+        reloadImageSkinOptions()
+        badgeView.needsDisplay = true
+    }
+
+    private func writeSkinConfig(imagePath: String, title: String) throws {
+        let configDirectory = userConfigDirectory()
+        try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
+        let configFile = configDirectory.appendingPathComponent("config.env")
+        let config = [
+            "export CODEX_QUOTA_SKIN_IMAGE=\(zshQuoted(imagePath))",
+            "export CODEX_QUOTA_SKIN_TITLE=\(zshQuoted(title))",
+            "",
+        ].joined(separator: "\n")
+        try config.write(to: configFile, atomically: true, encoding: .utf8)
     }
 
     private func writePNGImage(from sourceURL: URL, to destinationURL: URL) throws {
@@ -786,6 +880,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try fileManager.removeItem(at: destinationURL)
         }
         try fileManager.copyItem(at: sourceURL, to: destinationURL)
+    }
+
+    private func reloadImageSkinOptions() {
+        badgeView.imageSkinOptions = loadImageSkinOptions()
+    }
+
+    private func loadImageSkinOptions() -> [ImageSkinOption] {
+        let skinDirectory = userConfigDirectory().appendingPathComponent("skins", isDirectory: true)
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: skinDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        return urls
+            .filter { supportedSkinImageExtensions.contains($0.pathExtension.lowercased()) }
+            .map { url in
+                ImageSkinOption(path: url.path, title: storedSkinTitle(for: url) ?? defaultImageSkinTitle(for: url.path))
+            }
+            .sorted { lhs, rhs in
+                let lhsDate = modificationDate(for: lhs.path)
+                let rhsDate = modificationDate(for: rhs.path)
+                if lhsDate != rhsDate {
+                    return lhsDate > rhsDate
+                }
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+    }
+
+    private var supportedSkinImageExtensions: Set<String> {
+        ["png", "jpg", "jpeg", "heic", "tiff", "gif", "bmp", "webp"]
+    }
+
+    private func modificationDate(for path: String) -> Date {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: path)
+        return attrs?[.modificationDate] as? Date ?? .distantPast
+    }
+
+    private func storedSkinTitle(for imageURL: URL) -> String? {
+        let titleURL = imageURL.appendingPathExtension("title")
+        guard let text = try? String(contentsOf: titleURL, encoding: .utf8) else {
+            return nil
+        }
+        let title = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? nil : title
+    }
+
+    private func writeSkinTitle(_ title: String, for imageURL: URL) throws {
+        let titleURL = imageURL.appendingPathExtension("title")
+        try "\(title)\n".write(to: titleURL, atomically: true, encoding: .utf8)
     }
 
     private func userConfigDirectory() -> URL {
