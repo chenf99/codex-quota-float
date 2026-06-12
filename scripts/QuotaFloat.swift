@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import UniformTypeIdentifiers
 
 struct WindowStatus {
     let status: String
@@ -82,6 +83,7 @@ final class QuotaBadgeView: NSView {
     var onHoverChanged: ((Bool) -> Void)?
     var onRefreshRequested: (() -> Void)?
     var onQuitRequested: (() -> Void)?
+    var onChooseImageSkinRequested: (() -> Void)?
     var onDragStarted: (() -> Void)?
     var onDragEnded: (() -> Void)?
     private var dragStartMouseLocation: NSPoint?
@@ -175,6 +177,10 @@ final class QuotaBadgeView: NSView {
             item.state = option == skin ? .on : .off
             skinMenu.addItem(item)
         }
+        skinMenu.addItem(.separator())
+        let chooseImageItem = NSMenuItem(title: "Choose Image...", action: #selector(chooseImageSkinFromMenu), keyEquivalent: "")
+        chooseImageItem.target = self
+        skinMenu.addItem(chooseImageItem)
         menu.addItem(skinItem)
         menu.setSubmenu(skinMenu, for: skinItem)
 
@@ -197,6 +203,10 @@ final class QuotaBadgeView: NSView {
             return
         }
         skin = selected
+    }
+
+    @objc private func chooseImageSkinFromMenu() {
+        onChooseImageSkinRequested?()
     }
 
     @objc private func quitFromMenu() {
@@ -701,6 +711,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         badgeView.onQuitRequested = {
             NSApp.terminate(nil)
         }
+        badgeView.onChooseImageSkinRequested = { [weak self] in
+            self?.chooseImageSkin()
+        }
         badgeView.onDragStarted = { [weak self] in
             self?.beginWindowDrag()
         }
@@ -709,6 +722,89 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         window.contentView = badgeView
         window.makeKeyAndOrderFront(nil)
+    }
+
+    private func chooseImageSkin() {
+        NSApp.activate(ignoringOtherApps: true)
+
+        let panel = NSOpenPanel()
+        panel.title = "Choose Codex Quota Skin"
+        panel.message = "Choose an image for the floating ball and expanded panel."
+        panel.prompt = "Use Image"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = ["png", "jpg", "jpeg", "heic", "tiff", "gif", "bmp", "webp"].compactMap {
+            UTType(filenameExtension: $0)
+        }
+
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            self?.applyImageSkin(from: url)
+        }
+    }
+
+    private func applyImageSkin(from sourceURL: URL) {
+        do {
+            let fileManager = FileManager.default
+            let configDirectory = userConfigDirectory()
+            let skinDirectory = configDirectory.appendingPathComponent("skins", isDirectory: true)
+            let configFile = configDirectory.appendingPathComponent("config.env")
+            let skinImage = skinDirectory.appendingPathComponent("custom-image-skin.png")
+
+            try fileManager.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
+            try writePNGImage(from: sourceURL, to: skinImage)
+
+            let title = defaultImageSkinTitle(for: sourceURL.path)
+            let config = [
+                "export CODEX_QUOTA_SKIN_IMAGE=\(zshQuoted(skinImage.path))",
+                "export CODEX_QUOTA_SKIN_TITLE=\(zshQuoted(title))",
+                "",
+            ].joined(separator: "\n")
+            try config.write(to: configFile, atomically: true, encoding: .utf8)
+
+            badgeView.avatarImage = NSImage(contentsOf: skinImage)
+            badgeView.imageSkinTitle = title
+            badgeView.skin = .image
+            badgeView.needsDisplay = true
+        } catch {
+            showSkinError(error)
+        }
+    }
+
+    private func writePNGImage(from sourceURL: URL, to destinationURL: URL) throws {
+        if let image = NSImage(contentsOf: sourceURL),
+           let tiffData = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiffData),
+           let pngData = bitmap.representation(using: .png, properties: [:]) {
+            try pngData.write(to: destinationURL, options: .atomic)
+            return
+        }
+
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            try fileManager.removeItem(at: destinationURL)
+        }
+        try fileManager.copyItem(at: sourceURL, to: destinationURL)
+    }
+
+    private func userConfigDirectory() -> URL {
+        if let override = ProcessInfo.processInfo.environment["CODEX_QUOTA_CONFIG_DIR"], !override.isEmpty {
+            return URL(fileURLWithPath: NSString(string: override).expandingTildeInPath, isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex-quota-float", isDirectory: true)
+    }
+
+    private func zshQuoted(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+    }
+
+    private func showSkinError(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Could Not Set Image Skin"
+        alert.informativeText = error.localizedDescription
+        alert.runModal()
     }
 
     private func setExpanded(_ expanded: Bool) {

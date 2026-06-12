@@ -29,8 +29,10 @@ Optional commands:
 ```bash
 codex-quota-float status
 codex-quota-float autostart install
-codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 ```
+
+To use a custom image skin, right-click the floating window and choose
+`Skin` -> `Choose Image...`.
 
 If the shell says `codex-quota-float: command not found`, add the `PATH` line
 printed by the installer and open a new terminal.
@@ -56,8 +58,8 @@ codex-quota-float stop
 codex-quota-float update
 ```
 
-Right-click the floating ball or expanded panel for refresh, skin switching,
-and quit.
+Right-click the floating ball or expanded panel for refresh, image skin setup,
+skin switching, and quit.
 
 ## Command Reference
 
@@ -92,7 +94,9 @@ codex-quota-float skin set <image-path> [skin-title]
 ```
 
 Copies a local image to `~/.codex-quota-float/skins/` and uses it as the ball
-and panel skin. The optional title is shown in the skin menu.
+and panel skin. The optional title is shown in the skin menu. You can do the
+same thing from the UI by right-clicking the floating window and choosing
+`Skin` -> `Choose Image...`.
 
 ```bash
 codex-quota-float skin reset
@@ -145,7 +149,13 @@ aliases for `start`, `stop`, `update`, and `autostart install/uninstall`.
 ## Personal Skins
 
 The public repository does not include personal images. Configure your own
-local image skin:
+local image skin from the right-click menu:
+
+```text
+Skin -> Choose Image...
+```
+
+You can also configure it from the CLI:
 
 ```bash
 codex-quota-float skin set /path/to/image.png "My Skin Name"

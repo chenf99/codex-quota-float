@@ -29,8 +29,9 @@ codex-quota-float start
 ```bash
 codex-quota-float status
 codex-quota-float autostart install
-codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 ```
+
+如果要使用自定义图片皮肤，右键点击悬浮窗，选择 `Skin` -> `Choose Image...`。
 
 如果终端提示 `codex-quota-float: command not found`，按安装脚本打印的
 `PATH` 提示添加环境变量，然后重新打开终端。
@@ -56,7 +57,7 @@ codex-quota-float stop
 codex-quota-float update
 ```
 
-悬浮球或展开面板上可以右键打开菜单，用于刷新、切换皮肤和退出。
+悬浮球或展开面板上可以右键打开菜单，用于刷新、选择图片皮肤、切换皮肤和退出。
 
 ## 命令说明
 
@@ -89,7 +90,8 @@ codex-quota-float skin set <image-path> [skin-title]
 ```
 
 把本地图片复制到 `~/.codex-quota-float/skins/`，并作为悬浮球和展开面板的皮肤。
-可选的 `skin-title` 会显示在皮肤菜单里。
+可选的 `skin-title` 会显示在皮肤菜单里。你也可以在界面里右键悬浮窗，选择
+`Skin` -> `Choose Image...` 完成同样的配置。
 
 ```bash
 codex-quota-float skin reset
@@ -139,7 +141,13 @@ codex-quota-float cli install [target-directory-or-path]
 
 ## 个性化皮肤
 
-公开仓库不会包含任何个人图片。你可以配置自己的本地图片皮肤：
+公开仓库不会包含任何个人图片。你可以在右键菜单里配置自己的本地图片皮肤：
+
+```text
+Skin -> Choose Image...
+```
+
+也可以通过 CLI 配置：
 
 ```bash
 codex-quota-float skin set /path/to/image.png "My Skin Name"
