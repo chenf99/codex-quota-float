@@ -21,8 +21,10 @@ Environment overrides:
 After installation:
   codex-quota-float start
   codex-quota-float status
-  codex-quota-float skin set ~/Pictures/skin.png "My Skin"
   codex-quota-float autostart install
+
+For a custom image skin, right-click the floating window and choose:
+  Skin -> Choose Image...
 USAGE
 }
 
@@ -107,5 +109,7 @@ echo "Codex Quota Float is installed."
 echo "Try:"
 echo "  codex-quota-float start"
 echo "  codex-quota-float status"
-echo "  codex-quota-float skin set ~/Pictures/skin.png \"My Skin\""
 echo "  codex-quota-float autostart install"
+echo
+echo "For a custom image skin, right-click the floating window and choose:"
+echo "  Skin -> Choose Image..."
