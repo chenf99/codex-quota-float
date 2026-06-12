@@ -5,6 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_DIR="${CODEX_QUOTA_CONFIG_DIR:-$HOME/.codex-quota-float}"
 CONFIG_FILE="$CONFIG_DIR/config.env"
+TELEMETRY_BASE_URL="${CODEX_QUOTA_TELEMETRY_BASE_URL:-https://countapi.mileshilliard.com/api/v1}"
+TELEMETRY_KEY_PREFIX="${CODEX_QUOTA_TELEMETRY_KEY_PREFIX:-chenf99-codex-quota-float}"
+TELEMETRY_DISABLED_FILE="$CONFIG_DIR/telemetry.disabled"
 APP_ROOT="$INSTALL_ROOT/dist/Codex Quota Float.app"
 APP_LAUNCHER="$APP_ROOT/Contents/MacOS/codex-quota-float"
 APP_BIN="$APP_ROOT/Contents/MacOS/codex-quota-float-bin"
@@ -25,6 +28,12 @@ Commands:
 
   status [--pretty|--json]
       Print a one-shot quota summary from the local Codex app-server.
+
+  stats
+      Show public anonymous install counts.
+
+  telemetry status|disable|enable
+      Inspect or change anonymous install counting on this machine.
 
   skin set <image-path> [skin-title]
       Copy a local image into user config and use it as the image skin.
@@ -58,6 +67,80 @@ Compatibility aliases:
   login install       Same as autostart install.
   login uninstall     Same as autostart uninstall.
 USAGE
+}
+
+telemetry_disabled() {
+  case "${CODEX_QUOTA_TELEMETRY:-}" in
+    0|false|FALSE|off|OFF|no|NO)
+      return 0
+      ;;
+  esac
+
+  [[ -f "$TELEMETRY_DISABLED_FILE" ]]
+}
+
+telemetry_key() {
+  local event="$1"
+  echo "${TELEMETRY_KEY_PREFIX}-${event}"
+}
+
+telemetry_url() {
+  local action="$1"
+  local event="$2"
+  echo "${TELEMETRY_BASE_URL%/}/$action/$(telemetry_key "$event")"
+}
+
+counter_value() {
+  local event="$1"
+  local json value
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "unavailable"
+    return 0
+  fi
+
+  json="$(curl -sS --max-time 5 "$(telemetry_url get "$event")" 2>/dev/null || true)"
+
+  if [[ "$json" == *'"error":"Key not found"'* ]]; then
+    echo "0"
+    return 0
+  fi
+
+  value="${json#*\"value\":}"
+
+  if [[ "$value" == "$json" ]]; then
+    echo "unavailable"
+    return 0
+  fi
+
+  value="${value%%[^0-9]*}"
+  if [[ -z "$value" ]]; then
+    echo "unavailable"
+    return 0
+  fi
+
+  echo "$value"
+}
+
+print_stats() {
+  cat <<EOF
+Codex Quota Float stats
+  Anonymous installs: $(counter_value install)
+
+Counter endpoint:
+  $(telemetry_url get install)
+EOF
+}
+
+print_telemetry_status() {
+  if telemetry_disabled; then
+    echo "Anonymous install counting: disabled"
+  else
+    echo "Anonymous install counting: enabled"
+  fi
+
+  echo "Counter key: $(telemetry_key install)"
+  echo "Counter endpoint: $(telemetry_url get install)"
 }
 
 stop_window() {
@@ -106,6 +189,44 @@ case "$command" in
     ;;
   status)
     exec "$SCRIPT_DIR/codex_quota_status.py" "$@"
+    ;;
+  stats)
+    print_stats
+    ;;
+  telemetry)
+    subcommand="${1:-status}"
+    if [[ $# -gt 0 ]]; then
+      shift
+    fi
+    case "$subcommand" in
+      status)
+        print_telemetry_status
+        ;;
+      disable)
+        mkdir -p "$CONFIG_DIR"
+        : >"$TELEMETRY_DISABLED_FILE"
+        echo "Anonymous install counting is disabled on this machine."
+        ;;
+      enable)
+        rm -f "$TELEMETRY_DISABLED_FILE"
+        echo "Anonymous install counting is enabled on this machine."
+        ;;
+      help|--help|-h)
+        cat <<'USAGE'
+Usage: codex-quota-float telemetry <command>
+
+Commands:
+  status    Show anonymous install counting status and endpoint.
+  disable   Disable anonymous install counting on this machine.
+  enable    Enable anonymous install counting on this machine.
+USAGE
+        ;;
+      *)
+        echo "Unknown telemetry command: $subcommand" >&2
+        echo "Run 'codex-quota-float telemetry help' for usage." >&2
+        exit 2
+        ;;
+    esac
     ;;
   update|upgrade)
     INSTALLER="$INSTALL_ROOT/install.sh"

@@ -28,6 +28,7 @@ Optional commands:
 
 ```bash
 codex-quota-float status
+codex-quota-float stats
 codex-quota-float autostart install
 ```
 
@@ -52,6 +53,7 @@ This installs the repository under `~/.local/share/codex-quota-float` and adds
 ```bash
 codex-quota-float start
 codex-quota-float status
+codex-quota-float stats
 codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 codex-quota-float autostart install
 codex-quota-float stop
@@ -88,6 +90,25 @@ codex-quota-float status [--pretty|--json]
 
 Prints a one-shot quota summary by reading the local Codex app-server account
 and rate-limit snapshot.
+
+```bash
+codex-quota-float stats
+```
+
+Shows the public anonymous install count. The installer records one successful
+install event per local config directory, using the public counter key
+`chenf99-codex-quota-float-install`.
+
+```bash
+codex-quota-float telemetry status
+codex-quota-float telemetry disable
+codex-quota-float telemetry enable
+```
+
+Shows or changes anonymous install counting on this machine. The counter sends
+only the event name to `https://countapi.mileshilliard.com`; it does not send
+your Codex account, quota data, paths, image names, or skin files. You can also
+disable it for a single install with `CODEX_QUOTA_TELEMETRY=0`.
 
 ```bash
 codex-quota-float skin set <image-path> [skin-title]

@@ -5,6 +5,11 @@ REPO_URL="${CODEX_QUOTA_REPO_URL:-https://github.com/chenf99/codex-quota-float.g
 REF="${CODEX_QUOTA_REF:-main}"
 INSTALL_DIR="${CODEX_QUOTA_INSTALL_DIR:-$HOME/.local/share/codex-quota-float}"
 BIN_DIR="${CODEX_QUOTA_BIN_DIR:-$HOME/.local/bin}"
+CONFIG_DIR="${CODEX_QUOTA_CONFIG_DIR:-$HOME/.codex-quota-float}"
+TELEMETRY_BASE_URL="${CODEX_QUOTA_TELEMETRY_BASE_URL:-https://countapi.mileshilliard.com/api/v1}"
+TELEMETRY_KEY_PREFIX="${CODEX_QUOTA_TELEMETRY_KEY_PREFIX:-chenf99-codex-quota-float}"
+TELEMETRY_DISABLED_FILE="$CONFIG_DIR/telemetry.disabled"
+INSTALL_COUNTED_FILE="$CONFIG_DIR/install-counted"
 
 print_usage() {
   cat <<'USAGE'
@@ -17,15 +22,61 @@ Environment overrides:
   CODEX_QUOTA_REF           Git ref to install. Defaults to main.
   CODEX_QUOTA_INSTALL_DIR   Install directory. Defaults to ~/.local/share/codex-quota-float.
   CODEX_QUOTA_BIN_DIR       CLI directory. Defaults to ~/.local/bin.
+  CODEX_QUOTA_TELEMETRY=0   Disable the anonymous install counter.
 
 After installation:
   codex-quota-float start
   codex-quota-float status
+  codex-quota-float stats
   codex-quota-float autostart install
 
 For a custom image skin, right-click the floating window and choose:
   Skin -> Choose Image...
 USAGE
+}
+
+telemetry_disabled() {
+  case "${CODEX_QUOTA_TELEMETRY:-}" in
+    0|false|FALSE|off|OFF|no|NO)
+      return 0
+      ;;
+  esac
+
+  [[ -f "$TELEMETRY_DISABLED_FILE" ]]
+}
+
+telemetry_key() {
+  local event="$1"
+  echo "${TELEMETRY_KEY_PREFIX}-${event}"
+}
+
+telemetry_url() {
+  local action="$1"
+  local event="$2"
+  echo "${TELEMETRY_BASE_URL%/}/$action/$(telemetry_key "$event")"
+}
+
+record_install_count_once() {
+  if telemetry_disabled; then
+    return 0
+  fi
+
+  if [[ -f "$INSTALL_COUNTED_FILE" ]]; then
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    return 0
+  fi
+
+  mkdir -p "$CONFIG_DIR" 2>/dev/null || return 0
+
+  if curl -fsS --max-time 3 -o /dev/null "$(telemetry_url hit install)" 2>/dev/null; then
+    {
+      echo "counted_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      echo "event=install"
+    } >"$INSTALL_COUNTED_FILE" 2>/dev/null || true
+  fi
 }
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -103,13 +154,22 @@ if [[ ! -x "$INSTALL_DIR/scripts/install_cli.sh" ]]; then
 fi
 
 "$INSTALL_DIR/scripts/install_cli.sh" "$BIN_DIR"
+record_install_count_once
 
 echo
 echo "Codex Quota Float is installed."
 echo "Try:"
 echo "  codex-quota-float start"
 echo "  codex-quota-float status"
+echo "  codex-quota-float stats"
 echo "  codex-quota-float autostart install"
+echo
+if telemetry_disabled; then
+  echo "Anonymous install counting is disabled on this machine."
+else
+  echo "Anonymous install counting is enabled. It sends only an install event name."
+  echo "Disable it with: codex-quota-float telemetry disable"
+fi
 echo
 echo "For a custom image skin, right-click the floating window and choose:"
 echo "  Skin -> Choose Image..."
