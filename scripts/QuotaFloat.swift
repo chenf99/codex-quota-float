@@ -64,6 +64,38 @@ enum SkinError: LocalizedError {
 }
 
 private let skinDefaultsKey = "CodexQuotaFloatSkin"
+private let windowScreenPadding: CGFloat = 8
+
+private func screen(containing point: NSPoint) -> NSScreen? {
+    NSScreen.screens.first { screen in
+        screen.frame.contains(point)
+    }
+}
+
+private func constrainedWindowFrame(_ frame: NSRect, preferredPoint: NSPoint? = nil, fallbackScreen: NSScreen? = nil) -> NSRect {
+    let screen = preferredPoint.flatMap(screen(containing:))
+        ?? fallbackScreen
+        ?? NSScreen.screens.first { $0.frame.intersects(frame) }
+        ?? NSScreen.main
+    guard let visibleFrame = screen?.visibleFrame else { return frame }
+
+    let bounds = visibleFrame.insetBy(dx: windowScreenPadding, dy: windowScreenPadding)
+    var next = frame
+
+    if next.width >= bounds.width {
+        next.origin.x = bounds.midX - next.width / 2
+    } else {
+        next.origin.x = max(bounds.minX, min(next.origin.x, bounds.maxX - next.width))
+    }
+
+    if next.height >= bounds.height {
+        next.origin.y = bounds.midY - next.height / 2
+    } else {
+        next.origin.y = max(bounds.minY, min(next.origin.y, bounds.maxY - next.height))
+    }
+
+    return next
+}
 
 final class QuotaBadgeView: NSView {
     var status = WindowStatus.loading {
@@ -163,7 +195,7 @@ final class QuotaBadgeView: NSView {
             width: dragStartWindowFrame.width,
             height: dragStartWindowFrame.height
         )
-        window.setFrame(nextFrame, display: true, animate: false)
+        window.setFrame(constrainedWindowFrame(nextFrame, preferredPoint: currentMouse, fallbackScreen: window.screen), display: true, animate: false)
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -1051,7 +1083,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let anchor = NSPoint(x: window.frame.maxX, y: window.frame.maxY)
         let targetSize = expanded ? expandedSize : collapsedSize
-        let targetFrame = frame(for: targetSize, anchoredAt: anchor)
+        let targetFrame = constrainedWindowFrame(frame(for: targetSize, anchoredAt: anchor), preferredPoint: anchor, fallbackScreen: window.screen)
         let startProgress = badgeView.expansionProgress
         let targetProgress: CGFloat = expanded ? 1 : 0
         let duration: TimeInterval = expanded ? 0.085 : 0.07
@@ -1101,6 +1133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func endWindowDrag() {
         isDraggingWindow = false
+        window.setFrame(constrainedWindowFrame(window.frame, preferredPoint: NSEvent.mouseLocation, fallbackScreen: window.screen), display: true, animate: false)
         if targetExpanded {
             startHoverMonitor()
             badgeView.isExpanded = true
