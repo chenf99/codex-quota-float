@@ -65,6 +65,7 @@ enum SkinError: LocalizedError {
 
 private let skinDefaultsKey = "CodexQuotaFloatSkin"
 private let windowScreenPadding: CGFloat = 8
+private let maxHiddenWindowRatio: CGFloat = 0.75
 
 private func screen(containing point: NSPoint) -> NSScreen? {
     NSScreen.screens.first { screen in
@@ -82,17 +83,15 @@ private func constrainedWindowFrame(_ frame: NSRect, preferredPoint: NSPoint? = 
     let bounds = visibleFrame.insetBy(dx: windowScreenPadding, dy: windowScreenPadding)
     var next = frame
 
-    if next.width >= bounds.width {
-        next.origin.x = bounds.midX - next.width / 2
-    } else {
-        next.origin.x = max(bounds.minX, min(next.origin.x, bounds.maxX - next.width))
-    }
+    let visibleWidth = next.width * (1 - maxHiddenWindowRatio)
+    let visibleHeight = next.height * (1 - maxHiddenWindowRatio)
+    let minOriginX = bounds.minX - next.width * maxHiddenWindowRatio
+    let maxOriginX = bounds.maxX - visibleWidth
+    let minOriginY = bounds.minY - next.height * maxHiddenWindowRatio
+    let maxOriginY = bounds.maxY - visibleHeight
 
-    if next.height >= bounds.height {
-        next.origin.y = bounds.midY - next.height / 2
-    } else {
-        next.origin.y = max(bounds.minY, min(next.origin.y, bounds.maxY - next.height))
-    }
+    next.origin.x = max(minOriginX, min(next.origin.x, maxOriginX))
+    next.origin.y = max(minOriginY, min(next.origin.y, maxOriginY))
 
     return next
 }
