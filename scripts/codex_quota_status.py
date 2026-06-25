@@ -269,7 +269,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Read Codex account quota status.")
     parser.add_argument("--json", action="store_true", help="emit compact JSON")
     parser.add_argument("--pretty", action="store_true", help="emit formatted JSON")
-    parser.add_argument("--timeout", type=float, default=15.0, help="app-server timeout in seconds")
+    parser.add_argument("--timeout", type=float, default=30.0, help="app-server timeout in seconds")
     args = parser.parse_args()
 
     status = collect_status(args.timeout)

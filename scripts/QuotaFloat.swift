@@ -709,6 +709,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var collapseWorkItem: DispatchWorkItem?
     private var targetExpanded = false
     private var hoverGeneration = 0
+    private var lastGoodStatus: WindowStatus?
 
     init(statusScript: String, avatarImagePath: String?, initialSkin: QuotaSkin, avatarInitials: String, imageSkinTitle: String, interval: TimeInterval, topmost: Bool) {
         self.statusScript = statusScript
@@ -1133,7 +1134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = [statusScript, "--json"]
+        process.arguments = [statusScript, "--json", "--timeout", "30"]
 
         let outPipe = Pipe()
         let errPipe = Pipe()
@@ -1148,7 +1149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.badgeView.isRefreshing = false
                 if proc.terminationStatus != 0 && outData.isEmpty {
                     let errorText = String(data: errData, encoding: .utf8) ?? "collector exited with status \(proc.terminationStatus)"
-                    self?.badgeView.status = WindowStatus.error(errorText)
+                    self?.applyRefreshError(errorText)
                     return
                 }
                 self?.decodeAndApply(outData)
@@ -1157,7 +1158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         do {
             try process.run()
-            DispatchQueue.global().asyncAfter(deadline: .now() + 25) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 45) {
                 if process.isRunning {
                     process.terminate()
                 }
@@ -1165,20 +1166,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             isFetching = false
             badgeView.isRefreshing = false
-            badgeView.status = WindowStatus.error(error.localizedDescription)
+            applyRefreshError(error.localizedDescription)
         }
     }
 
     private func decodeAndApply(_ data: Data) {
         do {
             guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                badgeView.status = WindowStatus.error("collector returned non-object JSON")
+                applyRefreshError("collector returned non-object JSON")
                 return
             }
-            badgeView.status = WindowStatus(json: object)
+            let nextStatus = WindowStatus(json: object)
+            if nextStatus.status == "ok" {
+                lastGoodStatus = nextStatus
+                badgeView.status = nextStatus
+            } else {
+                applyRefreshError(nextStatus.errorLine ?? "status unavailable")
+            }
         } catch {
             let text = String(data: data, encoding: .utf8) ?? ""
-            badgeView.status = WindowStatus.error("JSON parse failed: \(error.localizedDescription). \(text)")
+            applyRefreshError("JSON parse failed: \(error.localizedDescription). \(text)")
+        }
+    }
+
+    private func applyRefreshError(_ message: String) {
+        if let lastGoodStatus {
+            badgeView.status = lastGoodStatus.withRefreshError(message)
+        } else {
+            badgeView.status = WindowStatus.error(message)
         }
     }
 }
@@ -1233,6 +1248,21 @@ extension WindowStatus {
         )
     }
 
+    func withRefreshError(_ message: String) -> WindowStatus {
+        WindowStatus(
+            status: status,
+            capturedAtText: capturedAtText,
+            accountLine: accountLine,
+            bucketLine: bucketLine,
+            primaryLine: primaryLine,
+            primaryRemaining: primaryRemaining,
+            secondaryLine: secondaryLine,
+            secondaryRemaining: secondaryRemaining,
+            extraLine: extraLine,
+            errorLine: "refresh failed: \(Self.shortError(message))"
+        )
+    }
+
     private static func percent(_ value: Any?) -> Double {
         if let intValue = value as? Int {
             return Double(max(0, min(100, intValue)))
@@ -1241,6 +1271,16 @@ extension WindowStatus {
             return max(0, min(100, doubleValue))
         }
         return 0
+    }
+
+    private static func shortError(_ message: String) -> String {
+        let cleaned = message
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.count <= 72 {
+            return cleaned
+        }
+        return String(cleaned.prefix(69)) + "..."
     }
 }
 
