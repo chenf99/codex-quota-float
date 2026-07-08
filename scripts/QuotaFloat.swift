@@ -1166,7 +1166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = [statusScript, "--json", "--timeout", "30"]
+        process.arguments = [statusScript, "--json", "--timeout", "30", "--samples", "3"]
 
         let outPipe = Pipe()
         let errPipe = Pipe()
@@ -1190,7 +1190,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         do {
             try process.run()
-            DispatchQueue.global().asyncAfter(deadline: .now() + 45) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 60) {
                 if process.isRunning {
                     process.terminate()
                 }

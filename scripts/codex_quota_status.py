@@ -63,6 +63,56 @@ def _normalize_window(window: Any) -> dict[str, Any] | None:
     }
 
 
+def _remaining_percent(window: Any) -> float | None:
+    if not isinstance(window, dict):
+        return None
+    used = window.get("usedPercent")
+    if not isinstance(used, (int, float)):
+        return None
+    return max(0, min(100, 100 - used))
+
+
+def _snapshot_risk(snapshot: Any) -> tuple[float, float, float]:
+    if not isinstance(snapshot, dict):
+        return (101, 101, 101)
+    primary_remaining = _remaining_percent(snapshot.get("primary"))
+    secondary_remaining = _remaining_percent(snapshot.get("secondary"))
+    values = [value for value in (primary_remaining, secondary_remaining) if value is not None]
+    if not values:
+        return (101, 101, 101)
+    primary_score = primary_remaining if primary_remaining is not None else 101
+    secondary_score = secondary_remaining if secondary_remaining is not None else 101
+    return (min(values), primary_score, secondary_score)
+
+
+def _rate_limits_risk(rate_limits_result: Any) -> tuple[float, float, float]:
+    if not isinstance(rate_limits_result, dict):
+        return (101, 101, 101)
+    by_limit = rate_limits_result.get("rateLimitsByLimitId")
+    if isinstance(by_limit, dict) and isinstance(by_limit.get("codex"), dict):
+        return _snapshot_risk(by_limit["codex"])
+    if isinstance(rate_limits_result.get("rateLimits"), dict):
+        return _snapshot_risk(rate_limits_result["rateLimits"])
+    if isinstance(by_limit, dict):
+        risks = [_snapshot_risk(snapshot) for snapshot in by_limit.values()]
+        if risks:
+            return min(risks)
+    return (101, 101, 101)
+
+
+def _has_rate_limits(app_server: Any) -> bool:
+    if not isinstance(app_server, dict):
+        return False
+    rate_result = app_server.get("rateLimitsResult")
+    return isinstance(rate_result, dict) and bool(rate_result.get("rateLimits") or rate_result.get("rateLimitsByLimitId"))
+
+
+def _choose_conservative_sample(samples: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not samples:
+        return None
+    return min(samples, key=lambda sample: _rate_limits_risk(sample.get("rateLimitsResult")))
+
+
 def _normalize_snapshot(snapshot: Any) -> dict[str, Any] | None:
     if not isinstance(snapshot, dict):
         return None
@@ -172,7 +222,7 @@ def _read_app_server(codex_bin: str, timeout_seconds: float) -> dict[str, Any]:
     }
 
 
-def collect_status(timeout_seconds: float) -> dict[str, Any]:
+def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_seconds: float = 0.4) -> dict[str, Any]:
     captured = _now()
     codex_bin = shutil.which("codex") or "/Applications/Codex.app/Contents/Resources/codex"
     result: dict[str, Any] = {
@@ -187,22 +237,30 @@ def collect_status(timeout_seconds: float) -> dict[str, Any]:
         "errors": [],
     }
 
+    sample_count = max(1, sample_count)
+    samples: list[dict[str, Any]] = []
+    sample_errors: list[str] = []
+
     try:
-        app_server = None
-        for attempt in range(2):
-            app_server = _read_app_server(codex_bin, timeout_seconds)
-            rate_result = app_server.get("rateLimitsResult")
-            if isinstance(rate_result, dict) and (rate_result.get("rateLimits") or rate_result.get("rateLimitsByLimitId")):
-                break
-            if attempt == 0:
-                time.sleep(0.5)
+        for attempt in range(sample_count):
+            attempt_timeout = timeout_seconds if attempt == 0 else min(timeout_seconds, 10.0)
+            try:
+                app_server_sample = _read_app_server(codex_bin, attempt_timeout)
+            except Exception as exc:  # noqa: BLE001 - keep later samples available.
+                sample_errors.append(str(exc))
+                continue
+            if _has_rate_limits(app_server_sample):
+                samples.append(app_server_sample)
+            if attempt < sample_count - 1:
+                time.sleep(sample_delay_seconds)
     except Exception as exc:  # noqa: BLE001 - this script should return a readable status object.
         result["status"] = "error"
         result["errors"].append(str(exc))
         return result
+    app_server = _choose_conservative_sample(samples)
     if app_server is None:
         result["status"] = "error"
-        result["errors"].append("app-server did not return a rate-limit response")
+        result["errors"].append(sample_errors[-1] if sample_errors else "app-server did not return a rate-limit response")
         return result
 
     account_result = app_server.get("accountResult") or {}
@@ -234,6 +292,8 @@ def collect_status(timeout_seconds: float) -> dict[str, Any]:
     result["raw"] = {
         "rateLimits": limits_result,
         "notifications": app_server.get("notifications", []),
+        "sampleCount": len(samples),
+        "sampleRisks": [_rate_limits_risk(sample.get("rateLimitsResult")) for sample in samples],
     }
     if app_server.get("stderr"):
         result["warnings"] = app_server["stderr"][-5:]
@@ -270,9 +330,11 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="emit compact JSON")
     parser.add_argument("--pretty", action="store_true", help="emit formatted JSON")
     parser.add_argument("--timeout", type=float, default=30.0, help="app-server timeout in seconds")
+    parser.add_argument("--samples", type=int, default=3, help="number of rate-limit samples to read")
+    parser.add_argument("--sample-delay", type=float, default=0.4, help="delay between samples in seconds")
     args = parser.parse_args()
 
-    status = collect_status(args.timeout)
+    status = collect_status(args.timeout, args.samples, args.sample_delay)
     if args.json:
         print(json.dumps(status, ensure_ascii=False, separators=(",", ":")))
     elif args.pretty:
