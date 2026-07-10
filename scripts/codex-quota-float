@@ -8,6 +8,11 @@ CONFIG_FILE="$CONFIG_DIR/config.env"
 TELEMETRY_BASE_URL="${CODEX_QUOTA_TELEMETRY_BASE_URL:-https://countapi.mileshilliard.com/api/v1}"
 TELEMETRY_KEY_PREFIX="${CODEX_QUOTA_TELEMETRY_KEY_PREFIX:-chenf99-codex-quota-float}"
 TELEMETRY_DISABLED_FILE="$CONFIG_DIR/telemetry.disabled"
+AUTO_UPDATE_DISABLED_FILE="$CONFIG_DIR/auto-update.disabled"
+AUTO_UPDATE_STATE_FILE="$CONFIG_DIR/auto-update.state"
+AUTO_UPDATE_PLIST="$HOME/Library/LaunchAgents/local.codex-quota-float.auto-update.plist"
+AUTO_UPDATE_LABEL="local.codex-quota-float.auto-update"
+AUTO_UPDATE_REF="${CODEX_QUOTA_REF:-main}"
 APP_ROOT="$INSTALL_ROOT/dist/Codex Quota Float.app"
 APP_LAUNCHER="$APP_ROOT/Contents/MacOS/codex-quota-float"
 APP_BIN="$APP_ROOT/Contents/MacOS/codex-quota-float-bin"
@@ -50,6 +55,18 @@ Commands:
 
   update
       Update the standalone CLI install from the public repository.
+
+  auto-update status
+      Show whether automatic updates are enabled and the last check result.
+
+  auto-update check
+      Check GitHub now. Updates and restarts the window only when needed.
+
+  auto-update enable
+      Check for updates automatically every 6 hours.
+
+  auto-update disable
+      Turn off automatic update checks.
 
   path
       Print this install path.
@@ -159,6 +176,134 @@ stop_window() {
   fi
 }
 
+short_revision() {
+  local revision="${1:-}"
+  if [[ -z "$revision" || "$revision" == "unknown" ]]; then
+    echo "unknown"
+    return 0
+  fi
+  echo "${revision[1,7]}"
+}
+
+current_revision() {
+  local revision=""
+  if command -v git >/dev/null 2>&1 && [[ -d "$INSTALL_ROOT/.git" ]]; then
+    revision="$(git -C "$INSTALL_ROOT" rev-parse HEAD 2>/dev/null || true)"
+  fi
+  if [[ -z "$revision" && -f "$CONFIG_DIR/installed-revision" ]]; then
+    revision="$(<"$CONFIG_DIR/installed-revision")"
+  fi
+  echo "${revision:-unknown}"
+}
+
+remote_revision() {
+  if ! command -v git >/dev/null 2>&1; then
+    return 1
+  fi
+
+  local remote_url="${CODEX_QUOTA_REPO_URL:-}"
+  if [[ -z "$remote_url" && -d "$INSTALL_ROOT/.git" ]]; then
+    remote_url="$(git -C "$INSTALL_ROOT" remote get-url origin 2>/dev/null || true)"
+  fi
+  remote_url="${remote_url:-https://github.com/chenf99/codex-quota-float.git}"
+
+  git ls-remote "$remote_url" "refs/heads/$AUTO_UPDATE_REF" 2>/dev/null | awk 'NR == 1 { print $1 }'
+}
+
+write_auto_update_state() {
+  local result="$1"
+  local current="$2"
+  local latest="$3"
+  local message="$4"
+  local tmp
+
+  mkdir -p "$CONFIG_DIR"
+  tmp="$AUTO_UPDATE_STATE_FILE.tmp.$$"
+  {
+    echo "checked_at=$(date '+%Y-%m-%d %H:%M:%S %z')"
+    echo "result=$result"
+    echo "current_revision=$current"
+    echo "latest_revision=$latest"
+    echo "message=$message"
+  } >"$tmp"
+  mv "$tmp" "$AUTO_UPDATE_STATE_FILE"
+}
+
+auto_update_check() {
+  local current latest was_running=0
+  current="$(current_revision)"
+
+  if ! latest="$(remote_revision)" || [[ -z "$latest" ]]; then
+    write_auto_update_state "failed" "$current" "unknown" "Could not read the latest revision from GitHub."
+    echo "Automatic update check failed: could not reach GitHub." >&2
+    return 1
+  fi
+
+  if [[ "$current" == "$latest" ]]; then
+    write_auto_update_state "up-to-date" "$current" "$latest" "Already up to date."
+    echo "Codex Quota Float is up to date ($(short_revision "$current"))."
+    return 0
+  fi
+
+  if pgrep -f "$APP_BIN" >/dev/null 2>&1 || pgrep -f "$APP_LAUNCHER" >/dev/null 2>&1; then
+    was_running=1
+  fi
+
+  write_auto_update_state "updating" "$current" "$latest" "Installing the latest revision."
+  echo "Updating Codex Quota Float: $(short_revision "$current") -> $(short_revision "$latest")"
+
+  if ! CODEX_QUOTA_SKIP_AUTO_UPDATE_AGENT=1 \
+    CODEX_QUOTA_INSTALL_DIR="$INSTALL_ROOT" \
+    CODEX_QUOTA_CONFIG_DIR="$CONFIG_DIR" \
+    CODEX_QUOTA_REF="$AUTO_UPDATE_REF" \
+    "$INSTALL_ROOT/install.sh"; then
+    write_auto_update_state "failed" "$current" "$latest" "Installer failed."
+    echo "Automatic update failed while running the installer." >&2
+    return 1
+  fi
+
+  local installed
+  installed="$(current_revision)"
+  if [[ "$installed" != "$latest" ]]; then
+    write_auto_update_state "failed" "$installed" "$latest" "Installed revision did not match GitHub."
+    echo "Automatic update did not install the expected revision." >&2
+    return 1
+  fi
+
+  if [[ "$was_running" == "1" ]]; then
+    "$INSTALL_ROOT/scripts/codex-quota-float" restart
+  fi
+
+  write_auto_update_state "updated" "$installed" "$latest" "Updated successfully."
+  echo "Automatic update completed ($(short_revision "$installed"))."
+}
+
+print_auto_update_status() {
+  local enabled="enabled"
+  if [[ -f "$AUTO_UPDATE_DISABLED_FILE" ]]; then
+    enabled="disabled"
+  elif [[ ! -f "$AUTO_UPDATE_PLIST" ]]; then
+    enabled="not installed"
+  elif ! launchctl print "gui/$(id -u)/$AUTO_UPDATE_LABEL" >/dev/null 2>&1; then
+    enabled="enabled, but the background agent is not loaded"
+  fi
+
+  echo "Automatic updates: $enabled"
+  echo "Check interval: every 6 hours"
+  if [[ -f "$AUTO_UPDATE_STATE_FILE" ]]; then
+    while IFS='=' read -r key value; do
+      case "$key" in
+        checked_at) echo "Last check: $value" ;;
+        result) echo "Last result: $value" ;;
+        message) echo "Details: $value" ;;
+      esac
+    done <"$AUTO_UPDATE_STATE_FILE"
+  else
+    echo "Last check: never"
+  fi
+  echo "Current revision: $(short_revision "$(current_revision)")"
+}
+
 command="${1:-help}"
 if [[ $# -gt 0 ]]; then
   shift
@@ -231,6 +376,46 @@ USAGE
     echo "Update with:" >&2
     echo '  curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | zsh' >&2
     exit 1
+    ;;
+  auto-update)
+    subcommand="${1:-status}"
+    if [[ $# -gt 0 ]]; then
+      shift
+    fi
+    case "$subcommand" in
+      status)
+        print_auto_update_status
+        ;;
+      check|now)
+        auto_update_check
+        ;;
+      enable)
+        mkdir -p "$CONFIG_DIR"
+        rm -f "$AUTO_UPDATE_DISABLED_FILE"
+        exec "$SCRIPT_DIR/install_auto_update_agent.sh" "$@"
+        ;;
+      disable)
+        mkdir -p "$CONFIG_DIR"
+        : >"$AUTO_UPDATE_DISABLED_FILE"
+        exec "$SCRIPT_DIR/uninstall_auto_update_agent.sh" "$@"
+        ;;
+      help|--help|-h)
+        cat <<'USAGE'
+Usage: codex-quota-float auto-update <command>
+
+Commands:
+  status    Show automatic update status and the last check result.
+  check     Check GitHub now and install a newer version if available.
+  enable    Enable background update checks every 6 hours.
+  disable   Disable background update checks.
+USAGE
+        ;;
+      *)
+        echo "Unknown auto-update command: $subcommand" >&2
+        echo "Run 'codex-quota-float auto-update help' for usage." >&2
+        exit 2
+        ;;
+    esac
     ;;
   skin)
     subcommand="${1:-help}"

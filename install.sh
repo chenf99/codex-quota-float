@@ -10,6 +10,8 @@ TELEMETRY_BASE_URL="${CODEX_QUOTA_TELEMETRY_BASE_URL:-https://countapi.mileshill
 TELEMETRY_KEY_PREFIX="${CODEX_QUOTA_TELEMETRY_KEY_PREFIX:-chenf99-codex-quota-float}"
 TELEMETRY_DISABLED_FILE="$CONFIG_DIR/telemetry.disabled"
 INSTALL_COUNTED_FILE="$CONFIG_DIR/install-counted"
+AUTO_UPDATE_DISABLED_FILE="$CONFIG_DIR/auto-update.disabled"
+INSTALLED_REVISION_FILE="$CONFIG_DIR/installed-revision"
 
 print_usage() {
   cat <<'USAGE'
@@ -23,6 +25,7 @@ Environment overrides:
   CODEX_QUOTA_INSTALL_DIR   Install directory. Defaults to ~/.local/share/codex-quota-float.
   CODEX_QUOTA_BIN_DIR       CLI directory. Defaults to ~/.local/bin.
   CODEX_QUOTA_TELEMETRY=0   Disable the anonymous install counter.
+  CODEX_QUOTA_AUTO_UPDATE=0 Disable automatic update checks.
 
 After installation:
   codex-quota-float start
@@ -75,6 +78,30 @@ record_install_count_once() {
       echo "counted_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
       echo "event=install"
     } >"$INSTALL_COUNTED_FILE" 2>/dev/null || true
+  fi
+}
+
+auto_update_disabled() {
+  case "${CODEX_QUOTA_AUTO_UPDATE:-}" in
+    0|false|FALSE|off|OFF|no|NO)
+      return 0
+      ;;
+  esac
+
+  [[ -f "$AUTO_UPDATE_DISABLED_FILE" ]]
+}
+
+record_installed_revision() {
+  local revision=""
+  if command -v git >/dev/null 2>&1 && [[ -d "$INSTALL_DIR/.git" ]]; then
+    revision="$(git -C "$INSTALL_DIR" rev-parse HEAD 2>/dev/null || true)"
+  fi
+  if [[ -z "$revision" ]] && command -v git >/dev/null 2>&1; then
+    revision="$(git ls-remote "$REPO_URL" "refs/heads/$REF" 2>/dev/null | awk 'NR == 1 { print $1 }')"
+  fi
+  if [[ -n "$revision" ]]; then
+    mkdir -p "$CONFIG_DIR"
+    echo "$revision" >"$INSTALLED_REVISION_FILE"
   fi
 }
 
@@ -153,7 +180,23 @@ if [[ ! -x "$INSTALL_DIR/scripts/install_cli.sh" ]]; then
 fi
 
 "$INSTALL_DIR/scripts/install_cli.sh" "$BIN_DIR"
+record_installed_revision
 record_install_count_once
+
+if [[ "${CODEX_QUOTA_SKIP_AUTO_UPDATE_AGENT:-0}" != "1" ]]; then
+  if auto_update_disabled; then
+    if [[ -n "${CODEX_QUOTA_AUTO_UPDATE:-}" ]]; then
+      mkdir -p "$CONFIG_DIR"
+      : >"$AUTO_UPDATE_DISABLED_FILE"
+      if [[ -x "$INSTALL_DIR/scripts/uninstall_auto_update_agent.sh" ]]; then
+        "$INSTALL_DIR/scripts/uninstall_auto_update_agent.sh"
+      fi
+    fi
+    echo "Automatic updates are disabled. Run 'codex-quota-float auto-update enable' to enable them."
+  elif [[ -x "$INSTALL_DIR/scripts/install_auto_update_agent.sh" ]]; then
+    "$INSTALL_DIR/scripts/install_auto_update_agent.sh"
+  fi
+fi
 
 echo
 echo "Codex Quota Float is installed."
@@ -161,6 +204,7 @@ echo "Try:"
 echo "  codex-quota-float start"
 echo "  codex-quota-float status"
 echo "  codex-quota-float autostart install"
+echo "  codex-quota-float auto-update status"
 echo
 if telemetry_disabled; then
   echo "Anonymous install counting is disabled on this machine."

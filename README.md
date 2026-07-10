@@ -37,6 +37,11 @@ To use a custom image skin, right-click the floating window and choose
 If the shell says `codex-quota-float: command not found`, add the `PATH` line
 printed by the installer and open a new terminal.
 
+Automatic updates are enabled by default. A lightweight background task checks
+GitHub every 6 hours. It does nothing when the installed revision is current;
+when a newer revision exists, it updates the CLI and restarts the floating
+window if it was already running.
+
 ## Install Details
 
 ```bash
@@ -54,6 +59,7 @@ codex-quota-float start
 codex-quota-float status
 codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 codex-quota-float autostart install
+codex-quota-float auto-update status
 codex-quota-float stop
 codex-quota-float update
 ```
@@ -130,6 +136,33 @@ codex-quota-float update
 ```
 
 Updates the installed repository from GitHub and refreshes the CLI wrapper.
+
+```bash
+codex-quota-float auto-update status
+```
+
+Shows whether automatic updates are enabled, the last check time, and its
+result. Automatic updates are enabled during installation and check GitHub
+every 6 hours.
+
+```bash
+codex-quota-float auto-update check
+```
+
+Checks immediately. If a newer revision exists, it installs the update and
+restarts the floating window only when the window was running before the check.
+
+```bash
+codex-quota-float auto-update enable
+codex-quota-float auto-update disable
+```
+
+Enables or disables the background update task. To opt out during the first
+installation, use:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | CODEX_QUOTA_AUTO_UPDATE=0 zsh
+```
 
 ```bash
 codex-quota-float path

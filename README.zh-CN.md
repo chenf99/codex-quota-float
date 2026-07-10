@@ -36,6 +36,10 @@ codex-quota-float autostart install
 如果终端提示 `codex-quota-float: command not found`，按安装脚本打印的
 `PATH` 提示添加环境变量，然后重新打开终端。
 
+安装后默认开启自动更新。后台任务每 6 小时轻量检查一次 GitHub；当前已经是
+最新版时不会做任何操作，发现新版本时才会更新 CLI，并在悬浮窗原本处于运行状态
+时自动重启悬浮窗。
+
 ## 安装细节
 
 ```bash
@@ -53,6 +57,7 @@ codex-quota-float start
 codex-quota-float status
 codex-quota-float skin set ~/Pictures/skin.png "My Skin"
 codex-quota-float autostart install
+codex-quota-float auto-update status
 codex-quota-float stop
 codex-quota-float update
 ```
@@ -124,6 +129,32 @@ codex-quota-float update
 ```
 
 从 GitHub 更新已安装的仓库，并刷新 CLI wrapper。
+
+```bash
+codex-quota-float auto-update status
+```
+
+查看自动更新是否开启、上次检查时间和检查结果。安装时会默认开启自动更新，
+每 6 小时检查一次 GitHub。
+
+```bash
+codex-quota-float auto-update check
+```
+
+立即检查一次。只有发现新版本时才会安装；如果检查前悬浮窗正在运行，更新完成后
+才会自动重启悬浮窗。
+
+```bash
+codex-quota-float auto-update enable
+codex-quota-float auto-update disable
+```
+
+开启或关闭后台自动更新。首次安装时若不想开启，可以在安装命令前加
+环境变量：
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/chenf99/codex-quota-float/main/install.sh?$(date +%s)" | CODEX_QUOTA_AUTO_UPDATE=0 zsh
+```
 
 ```bash
 codex-quota-float path
