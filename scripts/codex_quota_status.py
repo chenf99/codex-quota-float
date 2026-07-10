@@ -46,6 +46,31 @@ def _format_window(minutes: Any) -> str | None:
     return f"{minutes}m"
 
 
+def _resolve_codex_bin() -> tuple[str | None, list[str]]:
+    candidates = [
+        os.environ.get("CODEX_QUOTA_CODEX_BIN"),
+        os.environ.get("CODEX_BIN"),
+        shutil.which("codex"),
+        "/Applications/ChatGPT.app/Contents/Resources/codex",
+        "/Applications/Codex.app/Contents/Resources/codex",
+        "~/Applications/ChatGPT.app/Contents/Resources/codex",
+        "~/Applications/Codex.app/Contents/Resources/codex",
+        "/opt/homebrew/bin/codex",
+        "/usr/local/bin/codex",
+    ]
+    searched: list[str] = []
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = os.path.expanduser(candidate)
+        if path in searched:
+            continue
+        searched.append(path)
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path, searched
+    return None, searched
+
+
 def _normalize_window(window: Any) -> dict[str, Any] | None:
     if not isinstance(window, dict):
         return None
@@ -224,7 +249,7 @@ def _read_app_server(codex_bin: str, timeout_seconds: float) -> dict[str, Any]:
 
 def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_seconds: float = 0.4) -> dict[str, Any]:
     captured = _now()
-    codex_bin = shutil.which("codex") or "/Applications/Codex.app/Contents/Resources/codex"
+    codex_bin, searched_codex_bins = _resolve_codex_bin()
     result: dict[str, Any] = {
         "status": "ok",
         "capturedAt": captured.isoformat(timespec="seconds"),
@@ -236,6 +261,10 @@ def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_s
         "raw": {},
         "errors": [],
     }
+    if codex_bin is None:
+        result["status"] = "error"
+        result["errors"].append("codex executable not found; checked: " + ", ".join(searched_codex_bins))
+        return result
 
     sample_count = max(1, sample_count)
     samples: list[dict[str, Any]] = []
