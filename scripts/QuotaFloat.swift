@@ -15,8 +15,8 @@ struct WindowStatus {
     let errorLine: String?
 
     var riskRemaining: Double {
-        let values = [primaryRemaining, secondaryRemaining].filter { $0 > 0 }
-        return values.min() ?? 0
+        guard status == "ok" else { return 0 }
+        return min(primaryRemaining, secondaryRemaining)
     }
 
     static let loading = WindowStatus(
