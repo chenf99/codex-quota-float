@@ -42,6 +42,12 @@ GitHub every 6 hours. It does nothing when the installed revision is current;
 when a newer revision exists, it updates the CLI and restarts the floating
 window if it was already running.
 
+Existing installations can enable the feature once with:
+
+```bash
+codex-quota-float update && codex-quota-float auto-update enable
+```
+
 ## Install Details
 
 ```bash
@@ -143,7 +149,8 @@ codex-quota-float auto-update status
 
 Shows whether automatic updates are enabled, the last check time, and its
 result. Automatic updates are enabled during installation and check GitHub
-every 6 hours.
+every 6 hours. Users upgrading from a version without automatic updates should
+run `codex-quota-float update && codex-quota-float auto-update enable` once.
 
 ```bash
 codex-quota-float auto-update check

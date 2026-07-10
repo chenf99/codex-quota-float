@@ -40,6 +40,12 @@ codex-quota-float autostart install
 最新版时不会做任何操作，发现新版本时才会更新 CLI，并在悬浮窗原本处于运行状态
 时自动重启悬浮窗。
 
+已经安装过旧版本的用户，执行下面这条命令开启一次即可：
+
+```bash
+codex-quota-float update && codex-quota-float auto-update enable
+```
+
 ## 安装细节
 
 ```bash
@@ -135,7 +141,8 @@ codex-quota-float auto-update status
 ```
 
 查看自动更新是否开启、上次检查时间和检查结果。安装时会默认开启自动更新，
-每 6 小时检查一次 GitHub。
+每 6 小时检查一次 GitHub。旧版本升级的用户需要执行一次
+`codex-quota-float update && codex-quota-float auto-update enable`。
 
 ```bash
 codex-quota-float auto-update check
