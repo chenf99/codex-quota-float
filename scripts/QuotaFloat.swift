@@ -1251,6 +1251,7 @@ extension WindowStatus {
         let primaryReset = primary["resetsAtText"] as? String ?? "--"
         let secondaryReset = secondary["resetsAtText"] as? String ?? "--"
         let resetCreditsAvailable = json["resetCreditsAvailable"] as? Int ?? 0
+        let resetCreditExpires = json["nextResetCreditExpiresAtText"] as? String
         let errors = json["errors"] as? [String] ?? []
 
         self.status = status
@@ -1261,7 +1262,7 @@ extension WindowStatus {
         self.primaryRemaining = primaryRemaining
         self.secondaryLine = "\(secondaryWindow) left \(Int(secondaryRemaining))% · resets \(secondaryReset)"
         self.secondaryRemaining = secondaryRemaining
-        self.extraLine = Self.resetCreditsLine(resetCreditsAvailable)
+        self.extraLine = Self.resetCreditsLine(resetCreditsAvailable, expiresAtText: resetCreditExpires)
         self.errorLine = status == "ok" ? nil : (errors.first ?? "status unavailable")
     }
 
@@ -1305,9 +1306,13 @@ extension WindowStatus {
         return 0
     }
 
-    private static func resetCreditsLine(_ count: Int) -> String {
+    private static func resetCreditsLine(_ count: Int, expiresAtText: String?) -> String {
         let safeCount = max(0, count)
-        return safeCount == 1 ? "1 reset available" : "\(safeCount) resets available"
+        let prefix = safeCount == 1 ? "1 reset available" : "\(safeCount) resets available"
+        guard safeCount > 0, let expiresAtText, !expiresAtText.isEmpty else {
+            return prefix
+        }
+        return "\(prefix) · expires \(expiresAtText)"
     }
 
     private static func shortError(_ message: String) -> String {
@@ -1340,7 +1345,7 @@ func renderPreview(prefix: String, avatarImagePath: String?, skin: QuotaSkin, av
         primaryRemaining: 93,
         secondaryLine: "1w left 27% · resets 06-14 16:18",
         secondaryRemaining: 27,
-        extraLine: "2 resets available",
+        extraLine: "2 resets available · expires 07-31 01:51",
         errorLine: nil
     )
     let previews: [(String, NSSize, Bool)] = [
@@ -1398,7 +1403,7 @@ func renderAnimation(prefix: String, avatarImagePath: String?, skin: QuotaSkin, 
         primaryRemaining: 91,
         secondaryLine: "1w left 27% · resets 06-14 16:18",
         secondaryRemaining: 27,
-        extraLine: "2 resets available",
+        extraLine: "2 resets available · expires 07-31 01:51",
         errorLine: nil
     )
     let collapsed = NSSize(width: 68, height: 68)

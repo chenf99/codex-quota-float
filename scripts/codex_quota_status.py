@@ -31,6 +31,30 @@ def _format_reset(epoch_seconds: Any) -> str | None:
     return reset_at.strftime("%Y-%m-%d %H:%M")
 
 
+def _next_reset_credit_expiry(reset_credits: Any) -> dict[str, Any] | None:
+    if not isinstance(reset_credits, dict):
+        return None
+    credits = reset_credits.get("credits")
+    if not isinstance(credits, list):
+        return None
+    available_expiries = []
+    for credit in credits:
+        if not isinstance(credit, dict):
+            continue
+        if credit.get("status") != "available":
+            continue
+        expires_at = credit.get("expiresAt")
+        if isinstance(expires_at, (int, float)):
+            available_expiries.append(expires_at)
+    if not available_expiries:
+        return None
+    expires_at = min(available_expiries)
+    return {
+        "expiresAt": expires_at,
+        "expiresAtText": _format_reset(expires_at),
+    }
+
+
 def _format_window(minutes: Any) -> str | None:
     if not isinstance(minutes, int):
         return None
@@ -259,6 +283,8 @@ def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_s
         "buckets": [],
         "primaryBucket": None,
         "resetCreditsAvailable": 0,
+        "nextResetCreditExpiresAt": None,
+        "nextResetCreditExpiresAtText": None,
         "raw": {},
         "errors": [],
     }
@@ -303,6 +329,10 @@ def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_s
         reset_credits = limits_result.get("rateLimitResetCredits")
         if isinstance(reset_credits, dict) and isinstance(reset_credits.get("availableCount"), int):
             result["resetCreditsAvailable"] = max(0, reset_credits["availableCount"])
+            next_expiry = _next_reset_credit_expiry(reset_credits)
+            if next_expiry:
+                result["nextResetCreditExpiresAt"] = next_expiry["expiresAt"]
+                result["nextResetCreditExpiresAtText"] = next_expiry["expiresAtText"]
 
         by_limit = limits_result.get("rateLimitsByLimitId")
         snapshots: list[tuple[str, Any]] = []
@@ -356,7 +386,10 @@ def render_text(status: dict[str, Any]) -> str:
             f"{secondary.get('windowLabel', '?')} left {secondary.get('remainingPercent', '?')}% "
             f"(resets {secondary.get('resetsAtText', '?')})"
         )
-    lines.append(f"reset credits available: {status.get('resetCreditsAvailable', 0)}")
+    reset_line = f"reset credits available: {status.get('resetCreditsAvailable', 0)}"
+    if status.get("nextResetCreditExpiresAtText"):
+        reset_line += f" (next expires {status['nextResetCreditExpiresAtText']})"
+    lines.append(reset_line)
     return "\n".join(lines)
 
 
