@@ -1250,7 +1250,7 @@ extension WindowStatus {
         let secondaryWindow = secondary["windowLabel"] as? String ?? "window"
         let primaryReset = primary["resetsAtText"] as? String ?? "--"
         let secondaryReset = secondary["resetsAtText"] as? String ?? "--"
-        let extraCount = max(0, buckets.count - 1)
+        let resetCreditsAvailable = json["resetCreditsAvailable"] as? Int ?? 0
         let errors = json["errors"] as? [String] ?? []
 
         self.status = status
@@ -1261,7 +1261,7 @@ extension WindowStatus {
         self.primaryRemaining = primaryRemaining
         self.secondaryLine = "\(secondaryWindow) left \(Int(secondaryRemaining))% · resets \(secondaryReset)"
         self.secondaryRemaining = secondaryRemaining
-        self.extraLine = extraCount > 0 ? "\(extraCount) extra bucket: GPT-5.3-Codex-Spark" : "Local app-server source"
+        self.extraLine = Self.resetCreditsLine(resetCreditsAvailable)
         self.errorLine = status == "ok" ? nil : (errors.first ?? "status unavailable")
     }
 
@@ -1305,6 +1305,11 @@ extension WindowStatus {
         return 0
     }
 
+    private static func resetCreditsLine(_ count: Int) -> String {
+        let safeCount = max(0, count)
+        return safeCount == 1 ? "1 reset available" : "\(safeCount) resets available"
+    }
+
     private static func shortError(_ message: String) -> String {
         let cleaned = message
             .replacingOccurrences(of: "\n", with: " ")
@@ -1335,7 +1340,7 @@ func renderPreview(prefix: String, avatarImagePath: String?, skin: QuotaSkin, av
         primaryRemaining: 93,
         secondaryLine: "1w left 27% · resets 06-14 16:18",
         secondaryRemaining: 27,
-        extraLine: "1 extra bucket: GPT-5.3-Codex-Spark",
+        extraLine: "2 resets available",
         errorLine: nil
     )
     let previews: [(String, NSSize, Bool)] = [
@@ -1393,7 +1398,7 @@ func renderAnimation(prefix: String, avatarImagePath: String?, skin: QuotaSkin, 
         primaryRemaining: 91,
         secondaryLine: "1w left 27% · resets 06-14 16:18",
         secondaryRemaining: 27,
-        extraLine: "1 extra bucket: GPT-5.3-Codex-Spark",
+        extraLine: "2 resets available",
         errorLine: nil
     )
     let collapsed = NSSize(width: 68, height: 68)

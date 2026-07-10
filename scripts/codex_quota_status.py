@@ -258,6 +258,7 @@ def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_s
         "account": None,
         "buckets": [],
         "primaryBucket": None,
+        "resetCreditsAvailable": 0,
         "raw": {},
         "errors": [],
     }
@@ -299,6 +300,10 @@ def collect_status(timeout_seconds: float, sample_count: int = 3, sample_delay_s
 
     limits_result = app_server.get("rateLimitsResult") or {}
     if isinstance(limits_result, dict):
+        reset_credits = limits_result.get("rateLimitResetCredits")
+        if isinstance(reset_credits, dict) and isinstance(reset_credits.get("availableCount"), int):
+            result["resetCreditsAvailable"] = max(0, reset_credits["availableCount"])
+
         by_limit = limits_result.get("rateLimitsByLimitId")
         snapshots: list[tuple[str, Any]] = []
         if isinstance(by_limit, dict) and by_limit:
@@ -351,6 +356,7 @@ def render_text(status: dict[str, Any]) -> str:
             f"{secondary.get('windowLabel', '?')} left {secondary.get('remainingPercent', '?')}% "
             f"(resets {secondary.get('resetsAtText', '?')})"
         )
+    lines.append(f"reset credits available: {status.get('resetCreditsAvailable', 0)}")
     return "\n".join(lines)
 
 
