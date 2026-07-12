@@ -8,15 +8,15 @@ struct WindowStatus {
     let accountLine: String
     let bucketLine: String
     let primaryLine: String
-    let primaryRemaining: Double
+    let primaryRemaining: Double?
     let secondaryLine: String
-    let secondaryRemaining: Double
+    let secondaryRemaining: Double?
     let extraLine: String
     let errorLine: String?
 
-    var riskRemaining: Double {
-        guard status == "ok" else { return 0 }
-        return min(primaryRemaining, secondaryRemaining)
+    var riskRemaining: Double? {
+        guard status == "ok" else { return nil }
+        return [primaryRemaining, secondaryRemaining].compactMap { $0 }.min()
     }
 
     static let loading = WindowStatus(
@@ -25,9 +25,9 @@ struct WindowStatus {
         accountLine: "Reading Codex account",
         bucketLine: "Codex",
         primaryLine: "5h left --",
-        primaryRemaining: 0,
+        primaryRemaining: nil,
         secondaryLine: "1w left --",
-        secondaryRemaining: 0,
+        secondaryRemaining: nil,
         extraLine: "",
         errorLine: nil
     )
@@ -382,9 +382,10 @@ final class QuotaBadgeView: NSView {
 
         let inset = lerp(6, 5.5, progress)
         let ringWidth = lerp(4.8, 4.5, progress)
-        drawRing(in: rect.insetBy(dx: inset, dy: inset), percent: status.riskRemaining, width: ringWidth)
+        let riskRemaining = status.riskRemaining
+        drawRing(in: rect.insetBy(dx: inset, dy: inset), percent: riskRemaining ?? 0, width: ringWidth)
 
-        let percent = status.status == "ok" ? "\(Int(status.riskRemaining))%" : "--"
+        let percent = riskRemaining.map { "\(Int($0))%" } ?? "--"
         drawCenteredText(
             percent,
             in: rect,
@@ -395,7 +396,7 @@ final class QuotaBadgeView: NSView {
 
         if isRefreshing {
             let dotRect = NSRect(x: rect.maxX - 12, y: rect.maxY - 12, width: 8, height: 8)
-            metricColor(status.riskRemaining).setFill()
+            metricColor(riskRemaining ?? 0).setFill()
             NSBezierPath(ovalIn: dotRect).fill()
         }
     }
@@ -438,14 +439,14 @@ final class QuotaBadgeView: NSView {
             percent: status.primaryRemaining,
             y: rect.maxY - 122,
             in: rect,
-            accent: metricColor(status.primaryRemaining)
+            accent: status.primaryRemaining.map(metricColor) ?? NSColor.white.withAlphaComponent(0.24)
         )
         drawMetric(
             line: status.secondaryLine,
             percent: status.secondaryRemaining,
             y: rect.maxY - 158,
             in: rect,
-            accent: metricColor(status.secondaryRemaining)
+            accent: status.secondaryRemaining.map(metricColor) ?? NSColor.white.withAlphaComponent(0.24)
         )
 
         let footer = status.errorLine ?? status.extraLine
@@ -460,7 +461,7 @@ final class QuotaBadgeView: NSView {
         NSGraphicsContext.restoreGraphicsState()
     }
 
-    private func drawMetric(line: String, percent: Double, y: CGFloat, in rect: NSRect, accent: NSColor) {
+    private func drawMetric(line: String, percent: Double?, y: CGFloat, in rect: NSRect, accent: NSColor) {
         drawText(
             line,
             in: NSRect(x: rect.minX + 18, y: y + 12, width: rect.width - 36, height: 16),
@@ -473,6 +474,7 @@ final class QuotaBadgeView: NSView {
         NSColor.white.withAlphaComponent(skin == .image ? 0.12 : 0.10).setFill()
         NSBezierPath(roundedRect: barRect, xRadius: 3.5, yRadius: 3.5).fill()
 
+        guard let percent else { return }
         let fillWidth = max(7, barRect.width * CGFloat(max(0, min(100, percent)) / 100))
         let fillRect = NSRect(x: barRect.minX, y: barRect.minY, width: fillWidth, height: barRect.height)
         accent.setFill()
@@ -1242,14 +1244,10 @@ extension WindowStatus {
         let rawName = bucket["displayName"] as? String ?? "Codex"
         let name = rawName == "codex" ? "Codex" : rawName
         let plan = bucket["planType"] as? String ?? accountPlan
-        let primary = bucket["primary"] as? [String: Any] ?? [:]
-        let secondary = bucket["secondary"] as? [String: Any] ?? [:]
-        let primaryRemaining = Self.percent(primary["remainingPercent"])
-        let secondaryRemaining = Self.percent(secondary["remainingPercent"])
-        let primaryWindow = primary["windowLabel"] as? String ?? "window"
-        let secondaryWindow = secondary["windowLabel"] as? String ?? "window"
-        let primaryReset = primary["resetsAtText"] as? String ?? "--"
-        let secondaryReset = secondary["resetsAtText"] as? String ?? "--"
+        let primary = bucket["primary"] as? [String: Any]
+        let secondary = bucket["secondary"] as? [String: Any]
+        let primaryRemaining = Self.percent(primary?["remainingPercent"])
+        let secondaryRemaining = Self.percent(secondary?["remainingPercent"])
         let resetCreditsAvailable = json["resetCreditsAvailable"] as? Int ?? 0
         let resetCreditExpires = json["nextResetCreditExpiresAtText"] as? String
         let errors = json["errors"] as? [String] ?? []
@@ -1258,9 +1256,17 @@ extension WindowStatus {
         self.capturedAtText = capturedAtText
         self.accountLine = "\(email) · Codex \(plan.capitalized)"
         self.bucketLine = name == "Codex" ? "Codex quota bucket" : "\(name) bucket"
-        self.primaryLine = "\(primaryWindow) left \(Int(primaryRemaining))% · resets \(primaryReset)"
+        self.primaryLine = Self.metricLine(
+            window: primary,
+            remaining: primaryRemaining,
+            missingLabel: Self.missingWindowLabel(otherWindow: secondary, fallback: "5h")
+        )
         self.primaryRemaining = primaryRemaining
-        self.secondaryLine = "\(secondaryWindow) left \(Int(secondaryRemaining))% · resets \(secondaryReset)"
+        self.secondaryLine = Self.metricLine(
+            window: secondary,
+            remaining: secondaryRemaining,
+            missingLabel: Self.missingWindowLabel(otherWindow: primary, fallback: "1w")
+        )
         self.secondaryRemaining = secondaryRemaining
         self.extraLine = Self.resetCreditsLine(resetCreditsAvailable, expiresAtText: resetCreditExpires)
         self.errorLine = status == "ok" ? nil : (errors.first ?? "status unavailable")
@@ -1273,9 +1279,9 @@ extension WindowStatus {
             accountLine: "Codex quota unavailable",
             bucketLine: "Collector error",
             primaryLine: "5h left --",
-            primaryRemaining: 0,
+            primaryRemaining: nil,
             secondaryLine: "1w left --",
-            secondaryRemaining: 0,
+            secondaryRemaining: nil,
             extraLine: "",
             errorLine: message
         )
@@ -1296,14 +1302,34 @@ extension WindowStatus {
         )
     }
 
-    private static func percent(_ value: Any?) -> Double {
+    private static func percent(_ value: Any?) -> Double? {
         if let intValue = value as? Int {
             return Double(max(0, min(100, intValue)))
         }
         if let doubleValue = value as? Double {
             return max(0, min(100, doubleValue))
         }
-        return 0
+        return nil
+    }
+
+    private static func metricLine(window: [String: Any]?, remaining: Double?, missingLabel: String) -> String {
+        guard let window, let remaining else {
+            return "\(missingLabel) not returned"
+        }
+        let label = window["windowLabel"] as? String ?? "window"
+        let reset = window["resetsAtText"] as? String ?? "--"
+        return "\(label) left \(Int(remaining))% · resets \(reset)"
+    }
+
+    private static func missingWindowLabel(otherWindow: [String: Any]?, fallback: String) -> String {
+        switch otherWindow?["windowLabel"] as? String {
+        case "5h":
+            return "1w"
+        case "1w":
+            return "5h"
+        default:
+            return fallback
+        }
     }
 
     private static func resetCreditsLine(_ count: Int, expiresAtText: String?) -> String {
@@ -1456,6 +1482,72 @@ func renderAnimation(prefix: String, avatarImagePath: String?, skin: QuotaSkin, 
     return true
 }
 
+func runSelfTests() -> Bool {
+    let baseBucket: [String: Any] = [
+        "displayName": "codex",
+        "planType": "pro",
+    ]
+    let weeklyWindow: [String: Any] = [
+        "remainingPercent": 35,
+        "windowLabel": "1w",
+        "resetsAtText": "07-18 14:02",
+    ]
+
+    var singleWindowBucket = baseBucket
+    singleWindowBucket["primary"] = weeklyWindow
+    singleWindowBucket["secondary"] = NSNull()
+    let singleWindow = WindowStatus(json: [
+        "status": "ok",
+        "buckets": [singleWindowBucket],
+    ])
+
+    var zeroWindowBucket = baseBucket
+    zeroWindowBucket["primary"] = [
+        "remainingPercent": 0,
+        "windowLabel": "5h",
+        "resetsAtText": "16:03",
+    ]
+    zeroWindowBucket["secondary"] = NSNull()
+    let actualZero = WindowStatus(json: [
+        "status": "ok",
+        "buckets": [zeroWindowBucket],
+    ])
+
+    var fiveHourOnlyBucket = baseBucket
+    fiveHourOnlyBucket["primary"] = [
+        "remainingPercent": 80,
+        "windowLabel": "5h",
+        "resetsAtText": "16:03",
+    ]
+    fiveHourOnlyBucket["secondary"] = NSNull()
+    let fiveHourOnly = WindowStatus(json: [
+        "status": "ok",
+        "buckets": [fiveHourOnlyBucket],
+    ])
+
+    let noWindows = WindowStatus(json: [
+        "status": "ok",
+        "buckets": [baseBucket],
+    ])
+
+    let checks: [(String, Bool)] = [
+        ("missing secondary is not treated as zero", singleWindow.riskRemaining == 35),
+        ("missing 5h window is labeled explicitly", singleWindow.secondaryLine == "5h not returned"),
+        ("missing secondary has no progress value", singleWindow.secondaryRemaining == nil),
+        ("an actual zero remains zero", actualZero.riskRemaining == 0),
+        ("missing 1w window is labeled explicitly", fiveHourOnly.secondaryLine == "1w not returned"),
+        ("no returned windows has no risk value", noWindows.riskRemaining == nil),
+        ("no windows uses the standard labels", noWindows.primaryLine == "5h not returned" && noWindows.secondaryLine == "1w not returned"),
+    ]
+
+    var passed = true
+    for (name, result) in checks {
+        print("\(result ? "PASS" : "FAIL")  \(name)")
+        passed = passed && result
+    }
+    return passed
+}
+
 func argumentValue(_ name: String) -> String? {
     let args = CommandLine.arguments
     for index in args.indices where args[index] == name && index + 1 < args.count {
@@ -1485,6 +1577,9 @@ let interval = TimeInterval(argumentValue("--interval").flatMap(Double.init) ?? 
 let topmost = !CommandLine.arguments.contains("--normal-window")
 
 let app = NSApplication.shared
+if CommandLine.arguments.contains("--self-test") {
+    exit(runSelfTests() ? 0 : 1)
+}
 if let previewPrefix = argumentValue("--render-preview") {
     exit(renderPreview(prefix: previewPrefix, avatarImagePath: avatarImagePath, skin: initialSkin, avatarInitials: avatarInitials, imageSkinTitle: imageSkinTitle) ? 0 : 1)
 }
