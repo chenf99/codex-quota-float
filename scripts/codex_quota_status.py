@@ -15,6 +15,45 @@ import time
 from typing import Any
 
 
+_APP_CODEX_PATHS = (
+    "Contents/Resources/codex-cli/bin/codex",
+    "Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+    "Contents/Resources/codex",
+)
+
+
+def _app_codex_candidates(app_path: str) -> list[str]:
+    return [os.path.join(app_path, relative_path) for relative_path in _APP_CODEX_PATHS]
+
+
+def _registered_codex_apps() -> list[str]:
+    if sys.platform != "darwin":
+        return []
+    # Launch Services also knows apps that have been renamed or moved.
+    script = """
+ObjC.import("AppKit");
+JSON.stringify(["com.openai.codex", "com.openai.chat"].map(function(id) {
+    var url = $.NSWorkspace.sharedWorkspace.URLForApplicationWithBundleIdentifier(id);
+    return url ? ObjC.unwrap(url.path) : null;
+}).filter(function(path) { return path !== null; }));
+"""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/osascript", "-l", "JavaScript", "-e", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+            timeout=2,
+        )
+        paths = json.loads(result.stdout)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+    if not isinstance(paths, list):
+        return []
+    return [path for path in paths if isinstance(path, str) and os.path.isabs(path)]
+
+
 def _now() -> dt.datetime:
     return dt.datetime.now().astimezone()
 
@@ -75,24 +114,38 @@ def _resolve_codex_bin() -> tuple[str | None, list[str]]:
         os.environ.get("CODEX_QUOTA_CODEX_BIN"),
         os.environ.get("CODEX_BIN"),
         shutil.which("codex"),
-        "/Applications/ChatGPT.app/Contents/Resources/codex",
-        "/Applications/Codex.app/Contents/Resources/codex",
-        "~/Applications/ChatGPT.app/Contents/Resources/codex",
-        "~/Applications/Codex.app/Contents/Resources/codex",
-        "/opt/homebrew/bin/codex",
-        "/usr/local/bin/codex",
     ]
+    for app_path in (
+        "/Applications/ChatGPT.app",
+        "/Applications/Codex.app",
+        "~/Applications/ChatGPT.app",
+        "~/Applications/Codex.app",
+    ):
+        candidates.extend(_app_codex_candidates(app_path))
+    candidates.extend(["/opt/homebrew/bin/codex", "/usr/local/bin/codex"])
     searched: list[str] = []
-    for candidate in candidates:
-        if not candidate:
-            continue
-        path = os.path.expanduser(candidate)
-        if path in searched:
-            continue
-        searched.append(path)
-        if os.path.isfile(path) and os.access(path, os.X_OK):
-            return path, searched
-    return None, searched
+
+    def find_executable(paths: list[str | None]) -> str | None:
+        for candidate in paths:
+            if not candidate:
+                continue
+            path = os.path.expanduser(candidate)
+            if path in searched:
+                continue
+            searched.append(path)
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return path
+        return None
+
+    codex_bin = find_executable(candidates)
+    if codex_bin is None:
+        registered_candidates = [
+            candidate
+            for app_path in _registered_codex_apps()
+            for candidate in _app_codex_candidates(app_path)
+        ]
+        codex_bin = find_executable(registered_candidates)
+    return codex_bin, searched
 
 
 def _normalize_window(window: Any) -> dict[str, Any] | None:

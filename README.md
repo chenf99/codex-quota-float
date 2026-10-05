@@ -210,6 +210,21 @@ Without a configured image skin, the app uses `Classic Glass`.
 This tool currently uses Swift and AppKit (`NSWindow`, `.app` bundles,
 `launchctl`, and `sips`). Windows and Linux are not supported by this version.
 
+## Troubleshooting
+
+### Codex Executable Not Found
+
+A Codex desktop update can change the location of its bundled CLI. Update this
+tool and restart the window:
+
+```bash
+codex-quota-float update && codex-quota-float restart
+```
+
+The collector supports both current and older application layouts, terminal
+CLI installations, and macOS-registered apps that have been renamed or moved.
+It does not install Codex itself.
+
 ## Development
 
 Run directly from the repository:
@@ -220,3 +235,9 @@ scripts/codex-quota-float status
 ```
 
 Build artifacts live under `.build/` and `dist/`.
+
+Run the collector regression tests:
+
+```bash
+python3 -m unittest discover -s tests -v
+```

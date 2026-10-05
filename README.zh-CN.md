@@ -200,6 +200,19 @@ codex-quota-float skin set /path/to/image.png "My Skin Name"
 当前版本使用 Swift 和 AppKit（`NSWindow`、`.app` bundle、`launchctl`、`sips`）。
 Windows 和 Linux 暂不支持。
 
+## 故障排查
+
+### 找不到 Codex 可执行文件
+
+Codex 桌面应用更新后，内置 CLI 的位置可能发生变化。更新工具并重启悬浮窗：
+
+```bash
+codex-quota-float update && codex-quota-float restart
+```
+
+采集器兼容新旧应用目录、终端安装的 CLI，以及在 macOS 中已注册但被改名或移动的
+应用。本工具不会自行安装 Codex。
+
 ## 开发
 
 在仓库里直接运行：
@@ -210,3 +223,9 @@ scripts/codex-quota-float status
 ```
 
 构建产物会放在 `.build/` 和 `dist/`。
+
+运行采集器回归测试：
+
+```bash
+python3 -m unittest discover -s tests -v
+```
